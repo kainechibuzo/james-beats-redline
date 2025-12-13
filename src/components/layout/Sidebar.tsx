@@ -1,9 +1,14 @@
-import { Home, Search, Library, Upload, Heart, Clock, User } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Home, Search, Library, Upload, Heart, Clock, User, LogIn, LogOut } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const navItems = [
     { icon: Home, label: "Home", path: "/" },
@@ -16,6 +21,12 @@ const Sidebar = () => {
     { icon: Heart, label: "Liked Songs", path: "/liked" },
     { icon: Clock, label: "Recently Played", path: "/recent" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    navigate("/");
+  };
 
   return (
     <aside className="w-64 bg-sidebar h-screen flex flex-col border-r border-sidebar-border">
@@ -77,14 +88,34 @@ const Sidebar = () => {
         </div>
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
-        <Link
-          to="/profile"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent/50 transition-all duration-200"
-        >
-          <User className="w-5 h-5" />
-          <span className="text-sm">Profile</span>
-        </Link>
+      <div className="p-4 border-t border-sidebar-border space-y-2">
+        {user ? (
+          <>
+            <Link
+              to="/profile"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent/50 transition-all duration-200"
+            >
+              <User className="w-5 h-5" />
+              <span className="text-sm">{user.email?.split('@')[0]}</span>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="w-full justify-start gap-3 px-3 text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
+          </>
+        ) : (
+          <Link to="/auth">
+            <Button variant="glow" size="sm" className="w-full gap-2">
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </Button>
+          </Link>
+        )}
       </div>
     </aside>
   );
