@@ -1,51 +1,176 @@
-import { Play, SkipBack, SkipForward, Volume2, Shuffle, Repeat } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { usePlayer } from "@/contexts/PlayerContext";
+import { useIsLiked, useToggleLike } from "@/hooks/useSongs";
+import { cn } from "@/lib/utils";
+
+const formatTime = (seconds: number) => {
+  if (!seconds || isNaN(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
 
 const Player = () => {
+  const {
+    currentSong,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    shuffle,
+    repeat,
+    toggle,
+    seek,
+    setVolume,
+    next,
+    previous,
+    toggleShuffle,
+    toggleRepeat,
+  } = usePlayer();
+
+  const { data: isLiked } = useIsLiked(currentSong?.id);
+  const toggleLike = useToggleLike();
+
+  const handleSeek = (value: number[]) => {
+    seek(value[0]);
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0] / 100);
+  };
+
+  const handleLike = () => {
+    if (currentSong) {
+      toggleLike.mutate({ songId: currentSong.id, isLiked: !!isLiked });
+    }
+  };
+
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-card border-t border-border h-24 px-4 flex items-center justify-between">
+    <footer className="fixed bottom-0 left-0 right-0 bg-card border-t border-border h-24 px-4 flex items-center justify-between z-50">
       {/* Current Track Info */}
-      <div className="flex items-center gap-4 w-1/4">
-        <div className="w-14 h-14 bg-muted rounded-md flex items-center justify-center">
-          <span className="text-xs text-muted-foreground">No track</span>
-        </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-medium">Track Title</span>
-          <span className="text-xs text-muted-foreground">Artist Name</span>
-        </div>
+      <div className="flex items-center gap-4 w-1/4 min-w-0">
+        {currentSong ? (
+          <>
+            <div className="w-14 h-14 bg-muted rounded-md overflow-hidden flex-shrink-0">
+              {currentSong.cover_url ? (
+                <img
+                  src={currentSong.cover_url}
+                  alt={currentSong.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-primary/20">
+                  <span className="text-xs text-primary">♪</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium truncate">{currentSong.title}</span>
+              <span className="text-xs text-muted-foreground truncate">{currentSong.artist}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex-shrink-0"
+              onClick={handleLike}
+            >
+              <Heart
+                className={cn("w-4 h-4", isLiked && "fill-primary text-primary")}
+              />
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="w-14 h-14 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
+              <span className="text-xs text-muted-foreground">♪</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm text-muted-foreground">No track playing</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Playback Controls */}
-      <div className="flex flex-col items-center gap-2 w-2/4">
+      <div className="flex flex-col items-center gap-2 w-2/4 max-w-xl">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="w-8 h-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("w-8 h-8", shuffle && "text-primary")}
+            onClick={toggleShuffle}
+          >
             <Shuffle className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="w-8 h-8">
+          <Button variant="ghost" size="icon" className="w-8 h-8" onClick={previous}>
             <SkipBack className="w-4 h-4" />
           </Button>
-          <Button variant="glow" size="icon" className="w-10 h-10 rounded-full">
-            <Play className="w-5 h-5" />
+          <Button
+            variant="glow"
+            size="icon"
+            className="w-10 h-10 rounded-full"
+            onClick={toggle}
+            disabled={!currentSong}
+          >
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="w-8 h-8">
+          <Button variant="ghost" size="icon" className="w-8 h-8" onClick={next}>
             <SkipForward className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="w-8 h-8">
-            <Repeat className="w-4 h-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("w-8 h-8", repeat !== "off" && "text-primary")}
+            onClick={toggleRepeat}
+          >
+            {repeat === "one" ? (
+              <Repeat1 className="w-4 h-4" />
+            ) : (
+              <Repeat className="w-4 h-4" />
+            )}
           </Button>
         </div>
-        <div className="flex items-center gap-2 w-full max-w-md">
-          <span className="text-xs text-muted-foreground">0:00</span>
-          <Slider defaultValue={[0]} max={100} step={1} className="flex-1" />
-          <span className="text-xs text-muted-foreground">3:45</span>
+        <div className="flex items-center gap-2 w-full">
+          <span className="text-xs text-muted-foreground w-10 text-right">
+            {formatTime(currentTime)}
+          </span>
+          <Slider
+            value={[currentTime]}
+            max={duration || 100}
+            step={1}
+            onValueChange={handleSeek}
+            className="flex-1"
+            disabled={!currentSong}
+          />
+          <span className="text-xs text-muted-foreground w-10">
+            {formatTime(duration)}
+          </span>
         </div>
       </div>
 
       {/* Volume Control */}
       <div className="flex items-center gap-2 w-1/4 justify-end">
-        <Volume2 className="w-4 h-4" />
-        <Slider defaultValue={[70]} max={100} step={1} className="w-24" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="w-8 h-8"
+          onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
+        >
+          {volume === 0 ? (
+            <VolumeX className="w-4 h-4" />
+          ) : (
+            <Volume2 className="w-4 h-4" />
+          )}
+        </Button>
+        <Slider
+          value={[volume * 100]}
+          max={100}
+          step={1}
+          onValueChange={handleVolumeChange}
+          className="w-24"
+        />
       </div>
     </footer>
   );

@@ -139,13 +139,13 @@ export const useToggleLike = () => {
   });
 };
 
-export const useIsLiked = (songId: string) => {
+export const useIsLiked = (songId: string | undefined) => {
   const { user } = useAuth();
 
   return useQuery({
     queryKey: ["is-liked", songId, user?.id],
     queryFn: async () => {
-      if (!user) return false;
+      if (!user || !songId) return false;
 
       const { data, error } = await supabase
         .from("liked_songs")

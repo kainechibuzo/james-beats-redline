@@ -1,7 +1,8 @@
 import { Play, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Song, useToggleLike, useIsLiked, useTrackPlay } from "@/hooks/useSongs";
+import { Song, useToggleLike, useIsLiked } from "@/hooks/useSongs";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 
 interface SongCardProps {
@@ -13,13 +14,10 @@ const SongCard = ({ song, showArtist = true }: SongCardProps) => {
   const { user } = useAuth();
   const { data: isLiked } = useIsLiked(song.id);
   const toggleLike = useToggleLike();
-  const trackPlay = useTrackPlay();
+  const { play } = usePlayer();
 
   const handlePlay = () => {
-    if (user) {
-      trackPlay.mutate(song.id);
-    }
-    // TODO: Implement actual audio playback
+    play(song);
   };
 
   const handleLike = (e: React.MouseEvent) => {
