@@ -32,7 +32,7 @@ export const useLyrics = (songId: string | undefined) => {
       if (data) {
         return {
           ...data,
-          content: (Array.isArray(data.content) ? data.content : []) as LyricLine[],
+          content: (Array.isArray(data.content) ? data.content : []) as unknown as LyricLine[],
         } as Lyrics;
       }
       
