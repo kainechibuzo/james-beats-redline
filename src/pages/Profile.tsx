@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Mail, Crown, Settings, Camera, Save, X } from "lucide-react";
+import { User, Mail, Settings, Camera, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,25 +79,9 @@ const Profile = () => {
   };
 
   const getTierBadge = () => {
-    switch (profile?.subscription_tier) {
-      case "artist":
-        return (
-          <Badge className="gap-1 bg-gradient-to-r from-purple-500 to-pink-500">
-            <Crown className="w-3 h-3" />
-            Artist
-          </Badge>
-        );
-      case "premium":
-        return (
-          <Badge className="gap-1 bg-gradient-to-r from-amber-500 to-orange-500">
-            <Crown className="w-3 h-3" />
-            Premium
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">Free</Badge>;
-    }
+    return <Badge variant="secondary">Free</Badge>;
   };
+
 
   if (isLoading) {
     return (
@@ -202,92 +186,33 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Listening Stats</CardTitle>
-            <CardDescription>Your music activity</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Total Plays</span>
-              <span className="text-2xl font-bold">{profile?.total_plays || 0}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Total Likes</span>
-              <span className="text-2xl font-bold">{profile?.total_likes || 0}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Member Since</span>
-              <span className="text-lg font-semibold">
-                {profile?.created_at
-                  ? new Date(profile.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : "-"}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Subscription</CardTitle>
-            <CardDescription>Your current plan</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3 mb-4">
-              {getTierBadge()}
-              <span className="text-lg font-medium capitalize">
-                {profile?.subscription_tier || "free"} Plan
-              </span>
-            </div>
-            {profile?.subscription_tier === "free" && (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Upgrade to unlock premium features
-                </p>
-                <Button variant="glow" className="w-full">
-                  Upgrade to Premium
-                </Button>
-              </div>
-            )}
-            {profile?.subscription_tier === "premium" && (
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span>Upload up to 50 tracks</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span>Ad-free listening</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span>High quality audio</span>
-                </div>
-              </div>
-            )}
-            {profile?.subscription_tier === "artist" && (
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span>Unlimited uploads</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span>Analytics dashboard</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span>Verified artist badge</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Listening Stats</CardTitle>
+          <CardDescription>Your music activity</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Total Plays</span>
+            <span className="text-2xl font-bold">{profile?.total_plays || 0}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Total Likes</span>
+            <span className="text-2xl font-bold">{profile?.total_likes || 0}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Member Since</span>
+            <span className="text-lg font-semibold">
+              {profile?.created_at
+                ? new Date(profile.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "-"}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

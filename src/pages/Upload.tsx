@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload as UploadIcon, Music, X, Image, AlertCircle } from "lucide-react";
+import { Upload as UploadIcon, Music, X, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,9 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useUploadSong } from "@/hooks/useUpload";
-import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -20,7 +18,6 @@ const GENRES = [
 
 const Upload = () => {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
   const navigate = useNavigate();
   const uploadMutation = useUploadSong();
   
@@ -36,8 +33,6 @@ const Upload = () => {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const canUpload = profile?.subscription_tier === "premium" || profile?.subscription_tier === "artist";
-
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -45,7 +40,6 @@ const Upload = () => {
         return;
       }
       setAudioFile(file);
-      // Auto-fill title from filename
       if (!title) {
         setTitle(file.name.replace(/\.[^/.]+$/, ""));
       }
@@ -75,7 +69,6 @@ const Upload = () => {
       isPublic,
     });
 
-    // Reset form
     setTitle("");
     setArtist("");
     setAlbum("");
@@ -87,54 +80,6 @@ const Upload = () => {
     navigate("/library");
   };
 
-  if (!canUpload) {
-    return (
-      <div className="pb-32 max-w-3xl mx-auto animate-fade-in">
-        <h1 className="text-4xl font-bold mb-2">Upload Your Music</h1>
-        <p className="text-muted-foreground mb-8">
-          Share your tracks with the world.
-        </p>
-
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Uploading music requires a Premium or Artist subscription.
-          </AlertDescription>
-        </Alert>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Upgrade to Upload</CardTitle>
-            <CardDescription>
-              Get Premium or Artist tier to upload unlimited tracks
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="p-4 border border-border rounded-lg">
-                <h3 className="font-semibold mb-2">Premium</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Upload up to 50 tracks per month
-                </p>
-                <Button variant="outline" className="w-full">
-                  Upgrade to Premium
-                </Button>
-              </div>
-              <div className="p-4 border border-primary rounded-lg bg-primary/5">
-                <h3 className="font-semibold mb-2">Artist</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Unlimited uploads + analytics
-                </p>
-                <Button variant="glow" className="w-full">
-                  Become an Artist
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="pb-32 max-w-3xl mx-auto animate-fade-in">
