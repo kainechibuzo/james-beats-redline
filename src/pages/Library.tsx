@@ -2,29 +2,31 @@ import { useState } from "react";
 import { Music, Heart, ListMusic, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSongs, useLikedSongs } from "@/hooks/useSongs";
+import { usePlaylists } from "@/hooks/usePlaylists";
 import { useAuth } from "@/contexts/AuthContext";
 import SongCard from "@/components/home/SongCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 
-type Tab = "songs" | "liked";
+type Tab = "songs" | "liked" | "playlists";
 
 const Library = () => {
   const [activeTab, setActiveTab] = useState<Tab>("songs");
   const { user } = useAuth();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const { data: likedSongs, isLoading: likedLoading } = useLikedSongs();
+  const { data: playlists, isLoading: playlistsLoading } = usePlaylists();
 
-  // Get user's uploaded songs
   const userSongs = songs?.filter((song) => song.user_id === user?.id) || [];
 
   const tabs = [
     { id: "songs" as Tab, icon: Music, label: "My Songs", count: userSongs.length },
     { id: "liked" as Tab, icon: Heart, label: "Liked", count: likedSongs?.length || 0 },
+    { id: "playlists" as Tab, icon: ListMusic, label: "Playlists", count: playlists?.length || 0 },
   ];
 
-  const isLoading = activeTab === "songs" ? songsLoading : likedLoading;
-  const displaySongs = activeTab === "songs" ? userSongs : likedSongs || [];
+  const isLoading = activeTab === "songs" ? songsLoading : activeTab === "liked" ? likedLoading : playlistsLoading;
+  const displaySongs = activeTab === "songs" ? userSongs : activeTab === "liked" ? likedSongs || [] : [];
 
   return (
     <div className="pb-32 animate-fade-in">
@@ -67,6 +69,28 @@ const Library = () => {
             </div>
           ))}
         </div>
+      ) : activeTab === "playlists" ? (
+        playlists && playlists.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {playlists.map((playlist) => (
+              <Link key={playlist.id} to={`/playlist/${playlist.id}`}>
+                <div className="bg-card rounded-lg p-4 hover:bg-secondary/50 transition-colors cursor-pointer group">
+                  <div className="aspect-square bg-gradient-to-br from-primary/30 to-primary/10 rounded-md flex items-center justify-center mb-3">
+                    <ListMusic className="w-12 h-12 text-primary/50" />
+                  </div>
+                  <p className="font-medium truncate">{playlist.name}</p>
+                  <p className="text-sm text-muted-foreground truncate">{playlist.description || "Playlist"}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground bg-card rounded-lg border border-border">
+            <ListMusic className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No playlists yet</h3>
+            <p className="text-sm">Create playlists from the DJ section</p>
+          </div>
+        )
       ) : displaySongs.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {displaySongs.map((song) => (
