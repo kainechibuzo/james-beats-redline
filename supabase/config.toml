@@ -2,3 +2,12 @@ project_id = "wveminghxbxgwwdbzsgs"
 
 [functions.dj-mix]
 verify_jwt = false
+
+[functions.create-dj-playlist]
+verify_jwt = false
+
+[functions.generate-wrapped]
+verify_jwt = false
+
+[functions.generate-playlist]
+verify_jwt = false

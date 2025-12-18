@@ -16,6 +16,7 @@ import LikedSongs from "./pages/LikedSongs";
 import RecentlyPlayed from "./pages/RecentlyPlayed";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import PlaylistPage from "./pages/Playlist";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <RecentlyPlayed />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/playlist/:id"
+                  element={
+                    <ProtectedRoute>
+                      <PlaylistPage />
                     </ProtectedRoute>
                   }
                 />

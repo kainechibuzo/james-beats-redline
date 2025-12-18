@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Disc3, Sparkles, Music } from "lucide-react";
+import { Disc3, Sparkles, Music, Plus, ListMusic } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSongs, useRecentlyPlayed, useLikedSongs } from "@/hooks/useSongs";
+import { useSongs, useRecentlyPlayed, useLikedSongs, Song } from "@/hooks/useSongs";
+import { useCreatePlaylist } from "@/hooks/usePlaylists";
 import { toast } from "sonner";
 
 const MOODS = ["energetic", "chill", "focus", "party", "romantic", "workout"];
@@ -12,14 +13,17 @@ const DJSection = () => {
   const { data: songs } = useSongs();
   const { data: recentlyPlayed } = useRecentlyPlayed();
   const { data: likedSongs } = useLikedSongs();
+  const createPlaylist = useCreatePlaylist();
   
   const [isLoading, setIsLoading] = useState(false);
   const [djMessage, setDjMessage] = useState("");
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [suggestedSongs, setSuggestedSongs] = useState<Song[]>([]);
 
   const getDJMix = useCallback(async (mood?: string) => {
     setIsLoading(true);
     setDjMessage("");
+    setSuggestedSongs([]);
     
     try {
       const response = await fetch(
@@ -56,6 +60,7 @@ const DJSection = () => {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let fullMessage = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -79,6 +84,7 @@ const DJSection = () => {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
+              fullMessage += content;
               setDjMessage(prev => prev + content);
             }
           } catch {
@@ -87,6 +93,15 @@ const DJSection = () => {
           }
         }
       }
+
+      // Try to extract song suggestions from the message
+      if (songs && songs.length > 0) {
+        const suggested = songs.filter(song => 
+          fullMessage.toLowerCase().includes(song.title.toLowerCase()) ||
+          fullMessage.toLowerCase().includes(song.artist.toLowerCase())
+        ).slice(0, 5);
+        setSuggestedSongs(suggested);
+      }
     } catch (error) {
       console.error("DJ error:", error);
       toast.error("DJ is taking a break. Try again!");
@@ -94,6 +109,40 @@ const DJSection = () => {
       setIsLoading(false);
     }
   }, [songs, recentlyPlayed, likedSongs]);
+
+  const handleSaveAsPlaylist = async () => {
+    if (!suggestedSongs.length) {
+      // If no suggested songs, pick random from available
+      const randomSongs = songs?.slice(0, 5) || [];
+      if (!randomSongs.length) {
+        toast.error("No songs available to create playlist");
+        return;
+      }
+      
+      try {
+        await createPlaylist.mutateAsync({
+          name: `DJ Mix - ${selectedMood || "Custom"}`,
+          description: `AI-generated ${selectedMood || "custom"} playlist by DJ Beats`,
+          songIds: randomSongs.map(s => s.id),
+        });
+        toast.success("Playlist created!");
+      } catch {
+        toast.error("Failed to create playlist");
+      }
+      return;
+    }
+
+    try {
+      await createPlaylist.mutateAsync({
+        name: `DJ Mix - ${selectedMood || "Custom"}`,
+        description: `AI-generated ${selectedMood || "custom"} playlist by DJ Beats`,
+        songIds: suggestedSongs.map(s => s.id),
+      });
+      toast.success("Playlist created!");
+    } catch {
+      toast.error("Failed to create playlist");
+    }
+  };
 
   return (
     <section className="mb-8">
@@ -159,6 +208,36 @@ const DJSection = () => {
             {djMessage && (
               <div className="bg-background/50 rounded-lg p-4 mt-4 border border-border">
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{djMessage}</p>
+                
+                {suggestedSongs.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                      <ListMusic className="w-3 h-3" />
+                      Suggested tracks:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedSongs.map(song => (
+                        <span 
+                          key={song.id}
+                          className="text-xs bg-secondary px-2 py-1 rounded"
+                        >
+                          {song.title} - {song.artist}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <Button
+                  variant="glow"
+                  size="sm"
+                  className="mt-4"
+                  onClick={handleSaveAsPlaylist}
+                  disabled={createPlaylist.isPending}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {createPlaylist.isPending ? "Creating..." : "Save as Playlist"}
+                </Button>
               </div>
             )}
           </>
