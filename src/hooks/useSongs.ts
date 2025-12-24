@@ -46,14 +46,26 @@ export const useRecentlyPlayed = () => {
         .select(`
           id,
           played_at,
+          song_id,
           songs (*)
         `)
         .eq("user_id", user.id)
         .order("played_at", { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) throw error;
-      return data.map((item: any) => ({
+
+      // Deduplicate by song_id, keeping only the most recent play
+      const seenSongIds = new Set<string>();
+      const uniqueSongs = data
+        .filter((item: any) => {
+          if (seenSongIds.has(item.song_id)) return false;
+          seenSongIds.add(item.song_id);
+          return true;
+        })
+        .slice(0, 20);
+
+      return uniqueSongs.map((item: any) => ({
         ...item.songs,
         played_at: item.played_at,
       })) as (Song & { played_at: string })[];

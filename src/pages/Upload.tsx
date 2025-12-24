@@ -1,6 +1,6 @@
 import * as React from "react";
-import { useState, useRef } from "react";
-import { Upload as UploadIcon, Music, X, Image } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Upload as UploadIcon, Music, X, Image, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { useUploadSong } from "@/hooks/useUpload";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const GENRES = [
   "Pop", "Rock", "Hip-Hop", "R&B", "Electronic", "Jazz", 
@@ -19,6 +22,7 @@ const GENRES = [
 
 const Upload = () => {
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const navigate = useNavigate();
   const uploadMutation = useUploadSong();
   
@@ -30,14 +34,64 @@ const Upload = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [artistError, setArtistError] = useState<string | null>(null);
+  const [isCheckingArtist, setIsCheckingArtist] = useState(false);
 
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  // Set default artist name from profile
+  useEffect(() => {
+    if (profile?.display_name && !artist) {
+      setArtist(profile.display_name);
+    }
+  }, [profile?.display_name]);
+
+  // Check if artist name is taken by another user
+  const checkArtistName = async (artistName: string) => {
+    if (!artistName.trim() || !user) return;
+    
+    setIsCheckingArtist(true);
+    setArtistError(null);
+
+    try {
+      // Check if any other user has used this artist name
+      const { data, error } = await supabase
+        .from("songs")
+        .select("user_id")
+        .ilike("artist", artistName.trim())
+        .neq("user_id", user.id)
+        .limit(1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setArtistError("This artist name is already used by another user");
+      }
+    } catch (error) {
+      console.error("Error checking artist name:", error);
+    } finally {
+      setIsCheckingArtist(false);
+    }
+  };
+
+  const handleArtistChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setArtist(value);
+    setArtistError(null);
+  };
+
+  const handleArtistBlur = () => {
+    if (artist.trim()) {
+      checkArtistName(artist);
+    }
+  };
 
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 100 * 1024 * 1024) {
+        toast.error("File too large. Maximum size is 100MB");
         return;
       }
       setAudioFile(file);
@@ -60,9 +114,21 @@ const Upload = () => {
     
     if (!audioFile || !title || !artist) return;
 
+    if (artistError) {
+      toast.error("Please fix the artist name error before uploading");
+      return;
+    }
+
+    // Final check for artist name
+    await checkArtistName(artist);
+    if (artistError) {
+      toast.error("This artist name is already taken by another user");
+      return;
+    }
+
     await uploadMutation.mutateAsync({
       title,
-      artist,
+      artist: artist.trim(),
       album: album || undefined,
       genre: genre || undefined,
       audioFile,
@@ -71,7 +137,7 @@ const Upload = () => {
     });
 
     setTitle("");
-    setArtist("");
+    setArtist(profile?.display_name || "");
     setAlbum("");
     setGenre("");
     setAudioFile(null);
@@ -197,9 +263,23 @@ const Upload = () => {
                     id="artist"
                     placeholder="Enter artist name"
                     value={artist}
-                    onChange={(e) => setArtist(e.target.value)}
+                    onChange={handleArtistChange}
+                    onBlur={handleArtistBlur}
+                    className={artistError ? "border-destructive" : ""}
                     required
                   />
+                  {isCheckingArtist && (
+                    <p className="text-sm text-muted-foreground">Checking availability...</p>
+                  )}
+                  {artistError && (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {artistError}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Your artist name will be unique to you once you upload a song
+                  </p>
                 </div>
               </div>
             </div>
@@ -263,7 +343,7 @@ const Upload = () => {
                 type="submit"
                 variant="glow"
                 className="flex-1 gap-2"
-                disabled={!audioFile || !title || !artist || uploadMutation.isPending}
+                disabled={!audioFile || !title || !artist || !!artistError || uploadMutation.isPending}
               >
                 <Music className="w-4 h-4" />
                 {uploadMutation.isPending ? "Uploading..." : "Upload Track"}

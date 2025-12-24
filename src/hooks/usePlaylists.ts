@@ -176,6 +176,34 @@ export const useRemoveFromPlaylist = () => {
   });
 };
 
+export const useReorderPlaylistSongs = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      playlistId,
+      songs,
+    }: {
+      playlistId: string;
+      songs: { id: string; position: number }[];
+    }) => {
+      // Update each song's position
+      for (const song of songs) {
+        const { error } = await supabase
+          .from("playlist_songs")
+          .update({ position: song.position })
+          .eq("playlist_id", playlistId)
+          .eq("song_id", song.id);
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, { playlistId }) => {
+      queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] });
+    },
+  });
+};
+
 export const useDeletePlaylist = () => {
   const queryClient = useQueryClient();
 
