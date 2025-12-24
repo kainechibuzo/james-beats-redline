@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Play, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Song, useToggleLike, useIsLiked } from "@/hooks/useSongs";
@@ -5,12 +6,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 
-interface SongCardProps {
+export interface SongCardProps {
   song: Song;
   showArtist?: boolean;
 }
 
-const SongCard = ({ song, showArtist = true }: SongCardProps) => {
+const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true }) => {
   const { user } = useAuth();
   const { data: isLiked } = useIsLiked(song.id);
   const toggleLike = useToggleLike();
