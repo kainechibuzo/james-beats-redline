@@ -4,6 +4,8 @@ import { Slider } from "@/components/ui/slider";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useIsLiked, useToggleLike } from "@/hooks/useSongs";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import QueuePanel from "@/components/queue/QueuePanel";
 
 const formatTime = (seconds: number) => {
   if (!seconds || isNaN(seconds)) return "0:00";
@@ -32,6 +34,7 @@ const Player = () => {
 
   const { data: isLiked } = useIsLiked(currentSong?.id);
   const toggleLike = useToggleLike();
+  const isMobile = useIsMobile();
 
   const handleSeek = (value: number[]) => {
     seek(value[0]);
@@ -46,6 +49,66 @@ const Player = () => {
       toggleLike.mutate({ songId: currentSong.id, isLiked: !!isLiked });
     }
   };
+
+  if (isMobile) {
+    return (
+      <footer className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+        {/* Progress bar at top */}
+        <div className="px-2">
+          <Slider
+            value={[currentTime]}
+            max={duration || 100}
+            step={1}
+            onValueChange={handleSeek}
+            className="w-full"
+            disabled={!currentSong}
+          />
+        </div>
+        
+        <div className="h-16 px-3 flex items-center justify-between">
+          {/* Track info */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {currentSong ? (
+              <>
+                <div className="w-10 h-10 bg-muted rounded overflow-hidden flex-shrink-0">
+                  {currentSong.cover_url ? (
+                    <img src={currentSong.cover_url} alt={currentSong.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-primary/20">
+                      <span className="text-xs text-primary">♪</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-medium truncate">{currentSong.title}</span>
+                  <span className="text-[10px] text-muted-foreground truncate">{currentSong.artist}</span>
+                </div>
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground">No track playing</span>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleLike} disabled={!currentSong}>
+              <Heart className={cn("w-4 h-4", isLiked && "fill-primary text-primary")} />
+            </Button>
+            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={previous}>
+              <SkipBack className="w-4 h-4" />
+            </Button>
+            <Button variant="glow" size="icon" className="w-9 h-9 rounded-full" onClick={toggle} disabled={!currentSong}>
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+            </Button>
+            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={next}>
+              <SkipForward className="w-4 h-4" />
+            </Button>
+            <QueuePanel />
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 bg-card border-t border-border h-24 px-4 flex items-center justify-between z-50">
@@ -150,8 +213,9 @@ const Player = () => {
         </div>
       </div>
 
-      {/* Volume Control */}
+      {/* Volume Control & Queue */}
       <div className="flex items-center gap-2 w-1/4 justify-end">
+        <QueuePanel />
         <Button
           variant="ghost"
           size="icon"
