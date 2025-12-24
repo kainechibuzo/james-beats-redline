@@ -7,11 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Music } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Home = () => {
   const { user } = useAuth();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const { data: recentlyPlayed, isLoading: recentLoading } = useRecentlyPlayed();
+  const isMobile = useIsMobile();
 
   const featuredSongs = songs?.slice(0, 6) || [];
   const trendingSongs = songs?.slice(0, 4) || [];
@@ -24,66 +26,66 @@ const Home = () => {
 
       {/* Recently Played - only for logged in users */}
       {user && (
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Recently Played</h2>
+        <section className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>Recently Played</h2>
             <Link to="/recent">
-              <Button variant="ghost" size="sm">See all</Button>
+              <Button variant="ghost" size="sm" className={isMobile ? 'text-xs px-2' : ''}>See all</Button>
             </Link>
           </div>
           {recentLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="space-y-3">
+            <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
+              {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
+                <div key={i} className="space-y-2 md:space-y-3">
                   <Skeleton className="aspect-square rounded-md" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3 md:h-4 w-3/4" />
+                  <Skeleton className="h-2 md:h-3 w-1/2" />
                 </div>
               ))}
             </div>
           ) : recentlyPlayed && recentlyPlayed.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {recentlyPlayed.slice(0, 6).map((song) => (
+            <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
+              {recentlyPlayed.slice(0, isMobile ? 4 : 6).map((song) => (
                 <SongCard key={`${song.id}-${song.played_at}`} song={song} />
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Music className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No recently played songs yet</p>
-              <p className="text-sm">Start listening to build your history!</p>
+            <div className="text-center py-6 md:py-8 text-muted-foreground">
+              <Music className={`mx-auto mb-2 opacity-50 ${isMobile ? 'w-8 h-8' : 'w-12 h-12'}`} />
+              <p className={isMobile ? 'text-sm' : ''}>No recently played songs yet</p>
+              <p className="text-xs md:text-sm">Start listening to build your history!</p>
             </div>
           )}
         </section>
       )}
 
       {/* Featured Songs */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Featured Tracks</h2>
+      <section className="mb-6 md:mb-8">
+        <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Tracks</h2>
         {songsLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3">
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
+            {Array.from({ length: isMobile ? 4 : 6 }).map((_, i) => (
+              <div key={i} className="space-y-2 md:space-y-3">
                 <Skeleton className="aspect-square rounded-md" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-3 md:h-4 w-3/4" />
+                <Skeleton className="h-2 md:h-3 w-1/2" />
               </div>
             ))}
           </div>
         ) : featuredSongs.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
             {featuredSongs.map((song) => (
               <SongCard key={song.id} song={song} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-muted-foreground bg-card rounded-lg border border-border">
-            <Music className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2">No songs yet</h3>
-            <p className="text-sm mb-4">Be the first to upload a track!</p>
+          <div className={`text-center text-muted-foreground bg-card rounded-lg border border-border ${isMobile ? 'py-8' : 'py-12'}`}>
+            <Music className={`mx-auto mb-3 md:mb-4 opacity-50 ${isMobile ? 'w-10 h-10' : 'w-16 h-16'}`} />
+            <h3 className={`font-medium mb-2 ${isMobile ? 'text-base' : 'text-lg'}`}>No songs yet</h3>
+            <p className="text-xs md:text-sm mb-3 md:mb-4">Be the first to upload a track!</p>
             {user && (
               <Link to="/upload">
-                <Button variant="glow">Upload Song</Button>
+                <Button variant="glow" size={isMobile ? "sm" : "default"}>Upload Song</Button>
               </Link>
             )}
           </div>
@@ -93,8 +95,8 @@ const Home = () => {
       {/* Trending Now */}
       {trendingSongs.length > 0 && (
         <section>
-          <h2 className="text-2xl font-bold mb-4">Trending Now</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Trending Now</h2>
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
             {trendingSongs.map((song) => (
               <SongCard key={song.id} song={song} />
             ))}
