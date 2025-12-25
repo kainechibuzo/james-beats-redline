@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Play, Heart, MoreVertical, Trash2, ListPlus, ListMusic } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Play, Heart, MoreVertical, Trash2, ListPlus, ListMusic, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Song, useToggleLike, useIsLiked } from "@/hooks/useSongs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -122,6 +123,12 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
                   <ListPlus className="w-4 h-4 mr-2" />
                   Add to playlist
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`/artist/${encodeURIComponent(song.artist)}`} onClick={(e) => e.stopPropagation()}>
+                    <User className="w-4 h-4 mr-2" />
+                    View artist
+                  </Link>
+                </DropdownMenuItem>
                 {(isOwner || showDelete) && (
                   <DropdownMenuItem 
                     className="text-destructive focus:text-destructive"
@@ -137,7 +144,13 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
         </div>
         <h3 className={`font-semibold mb-0.5 truncate ${isSmall ? 'text-xs' : 'text-sm md:text-base'}`}>{song.title}</h3>
         {showArtist && (
-          <p className={`text-muted-foreground truncate ${isSmall ? 'text-[10px]' : 'text-xs md:text-sm'}`}>{song.artist}</p>
+          <Link 
+            to={`/artist/${encodeURIComponent(song.artist)}`}
+            className={`text-muted-foreground hover:text-primary hover:underline truncate block ${isSmall ? 'text-[10px]' : 'text-xs md:text-sm'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {song.artist}
+          </Link>
         )}
         {showAlbum && song.album && (
           <p className={`text-muted-foreground/70 truncate ${isSmall ? 'text-[10px]' : 'text-xs md:text-sm'}`}>{song.album}</p>

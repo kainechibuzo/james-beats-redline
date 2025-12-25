@@ -82,6 +82,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/artist/:name" element={<Artist />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
