@@ -1,17 +1,113 @@
 import * as React from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ListMusic, X, Play } from "lucide-react";
+import { ListMusic, Play, GripVertical } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Song } from "@/hooks/useSongs";
 
 interface QueuePanelProps {
   trigger?: React.ReactNode;
 }
 
+interface SortableQueueItemProps {
+  song: Song;
+  index: number;
+  onPlay: (song: Song) => void;
+}
+
+const SortableQueueItem = ({ song, index, onPlay }: SortableQueueItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `${song.id}-${index}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 transition-colors group",
+        isDragging && "opacity-50 bg-secondary"
+      )}
+    >
+      <button
+        className="touch-none cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <span className="w-5 text-xs text-muted-foreground">{index + 1}</span>
+      <img
+        src={song.cover_url || "/placeholder.svg"}
+        alt={song.title}
+        className="w-10 h-10 rounded object-cover"
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm truncate">{song.title}</p>
+        <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+      </div>
+      <button
+        onClick={() => onPlay(song)}
+        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <Play className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
 const QueuePanel = ({ trigger }: QueuePanelProps) => {
-  const { queue, currentSong, play, clearQueue } = usePlayer();
+  const { queue, currentSong, play, clearQueue, setQueue } = usePlayer();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = queue.findIndex((s, i) => `${s.id}-${i}` === active.id);
+      const newIndex = queue.findIndex((s, i) => `${s.id}-${i}` === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newQueue = arrayMove(queue, oldIndex, newIndex);
+        // Preserve current song position
+        if (currentSong) {
+          const currentIndex = newQueue.findIndex(s => s.id === currentSong.id);
+          if (currentIndex !== -1) {
+            setQueue(newQueue);
+          }
+        } else {
+          setQueue(newQueue);
+        }
+      }
+    }
+  };
+
+  const sortableItems = queue.map((song, index) => `${song.id}-${index}`);
 
   return (
     <Sheet>
@@ -58,33 +154,28 @@ const QueuePanel = ({ trigger }: QueuePanelProps) => {
 
         <div>
           <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">
-            Up Next ({queue.length})
+            Up Next ({queue.length}) - Drag to reorder
           </p>
           {queue.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-1">
-                {queue.map((song, index) => (
-                  <button
-                    key={`${song.id}-${index}`}
-                    onClick={() => play(song)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors text-left group"
-                    )}
-                  >
-                    <span className="w-5 text-xs text-muted-foreground">{index + 1}</span>
-                    <img
-                      src={song.cover_url || "/placeholder.svg"}
-                      alt={song.title}
-                      className="w-10 h-10 rounded object-cover"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate">{song.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
-                    </div>
-                    <Play className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1">
+                    {queue.map((song, index) => (
+                      <SortableQueueItem
+                        key={`${song.id}-${index}`}
+                        song={song}
+                        index={index}
+                        onPlay={play}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </ScrollArea>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
