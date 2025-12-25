@@ -28,10 +28,12 @@ import {
 export interface SongCardProps {
   song: Song;
   showArtist?: boolean;
+  showAlbum?: boolean;
   showDelete?: boolean;
+  compact?: boolean;
 }
 
-const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showDelete = false }) => {
+const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum = false, showDelete = false, compact = false }) => {
   const { user } = useAuth();
   const { data: isLiked } = useIsLiked(song.id);
   const toggleLike = useToggleLike();
@@ -40,6 +42,9 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showDelete
   const deleteSong = useDeleteSong();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [playlistDialogOpen, setPlaylistDialogOpen] = React.useState(false);
+
+  // Determine size based on compact prop and mobile
+  const isSmall = compact || isMobile;
 
   const isOwner = user?.id === song.user_id;
 
@@ -66,32 +71,32 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showDelete
   return (
     <>
       <div 
-        className={`group bg-card rounded-lg hover:bg-card/80 transition-all duration-200 cursor-pointer ${isMobile ? 'p-2' : 'p-4'}`}
+        className={`group bg-card rounded-lg hover:bg-card/80 transition-all duration-200 cursor-pointer ${isSmall ? 'p-2' : 'p-3 md:p-4'}`}
         onClick={handlePlay}
       >
-        <div className={`relative ${isMobile ? 'mb-2' : 'mb-4'}`}>
+        <div className={`relative ${isSmall ? 'mb-1.5' : 'mb-2 md:mb-3'}`}>
           <img
             src={song.cover_url || "/placeholder.svg"}
             alt={song.title}
-            className="w-full aspect-square object-cover rounded-md bg-muted"
+            className={`w-full aspect-square object-cover rounded-md bg-muted ${isSmall ? 'max-w-[120px]' : 'max-w-[180px] md:max-w-none'}`}
           />
-          <div className={`absolute bottom-1 md:bottom-2 right-1 md:right-2 flex gap-1 md:gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0`}>
+          <div className={`absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0`}>
             {user && (
               <Button
                 variant="secondary"
                 size="icon"
-                className={`rounded-full ${isMobile ? 'w-6 h-6' : 'w-8 h-8'}`}
+                className={`rounded-full ${isSmall ? 'w-5 h-5' : 'w-7 h-7 md:w-8 md:h-8'}`}
                 onClick={handleLike}
               >
-                <Heart className={cn(isMobile ? "w-3 h-3" : "w-4 h-4", isLiked && "fill-primary text-primary")} />
+                <Heart className={cn(isSmall ? "w-2.5 h-2.5" : "w-3.5 h-3.5 md:w-4 md:h-4", isLiked && "fill-primary text-primary")} />
               </Button>
             )}
             <Button
               variant="glow"
               size="icon"
-              className={`rounded-full ${isMobile ? 'w-7 h-7' : ''}`}
+              className={`rounded-full ${isSmall ? 'w-6 h-6' : 'w-8 h-8 md:w-9 md:h-9'}`}
             >
-              <Play className={isMobile ? "w-3 h-3" : "w-5 h-5"} />
+              <Play className={isSmall ? "w-2.5 h-2.5" : "w-4 h-4 md:w-5 md:h-5"} />
             </Button>
           </div>
           
@@ -102,10 +107,10 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showDelete
                 <Button
                   variant="secondary"
                   size="icon"
-                  className={`absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity ${isMobile ? 'w-6 h-6' : 'w-8 h-8'}`}
+                  className={`absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity ${isSmall ? 'w-5 h-5' : 'w-7 h-7 md:w-8 md:h-8'}`}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <MoreVertical className={isMobile ? "w-3 h-3" : "w-4 h-4"} />
+                  <MoreVertical className={isSmall ? "w-2.5 h-2.5" : "w-3.5 h-3.5 md:w-4 md:h-4"} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -130,9 +135,12 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showDelete
             </DropdownMenu>
           )}
         </div>
-        <h3 className={`font-semibold mb-1 truncate ${isMobile ? 'text-sm' : ''}`}>{song.title}</h3>
+        <h3 className={`font-semibold mb-0.5 truncate ${isSmall ? 'text-xs' : 'text-sm md:text-base'}`}>{song.title}</h3>
         {showArtist && (
-          <p className={`text-muted-foreground truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>{song.artist}</p>
+          <p className={`text-muted-foreground truncate ${isSmall ? 'text-[10px]' : 'text-xs md:text-sm'}`}>{song.artist}</p>
+        )}
+        {showAlbum && song.album && (
+          <p className={`text-muted-foreground/70 truncate ${isSmall ? 'text-[10px]' : 'text-xs md:text-sm'}`}>{song.album}</p>
         )}
       </div>
 

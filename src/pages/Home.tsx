@@ -34,19 +34,19 @@ const Home = () => {
             </Link>
           </div>
           {recentLoading ? (
-            <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
-              {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
-                <div key={i} className="space-y-2 md:space-y-3">
-                  <Skeleton className="aspect-square rounded-md" />
-                  <Skeleton className="h-3 md:h-4 w-3/4" />
-                  <Skeleton className="h-2 md:h-3 w-1/2" />
+            <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
+              {Array.from({ length: isMobile ? 3 : 6 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="aspect-square rounded-md max-w-[120px] md:max-w-[180px]" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-2 w-1/2" />
                 </div>
               ))}
             </div>
           ) : recentlyPlayed && recentlyPlayed.length > 0 ? (
-            <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
-              {recentlyPlayed.slice(0, isMobile ? 4 : 6).map((song) => (
-                <SongCard key={`${song.id}-${song.played_at}`} song={song} />
+            <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
+              {recentlyPlayed.slice(0, isMobile ? 6 : 6).map((song) => (
+                <SongCard key={`${song.id}-${song.played_at}`} song={song} showAlbum compact />
               ))}
             </div>
           ) : (
@@ -63,19 +63,19 @@ const Home = () => {
       <section className="mb-6 md:mb-8">
         <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Tracks</h2>
         {songsLoading ? (
-          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
-            {Array.from({ length: isMobile ? 4 : 6 }).map((_, i) => (
-              <div key={i} className="space-y-2 md:space-y-3">
-                <Skeleton className="aspect-square rounded-md" />
-                <Skeleton className="h-3 md:h-4 w-3/4" />
-                <Skeleton className="h-2 md:h-3 w-1/2" />
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
+            {Array.from({ length: isMobile ? 6 : 6 }).map((_, i) => (
+              <div key={i} className="space-y-1.5">
+                <Skeleton className="aspect-square rounded-md max-w-[120px] md:max-w-[180px]" />
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-2 w-1/2" />
               </div>
             ))}
           </div>
         ) : featuredSongs.length > 0 ? (
-          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {featuredSongs.map((song) => (
-              <SongCard key={song.id} song={song} />
+              <SongCard key={song.id} song={song} showAlbum compact />
             ))}
           </div>
         ) : (
@@ -96,9 +96,9 @@ const Home = () => {
       {trendingSongs.length > 0 && (
         <section>
           <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Trending Now</h2>
-          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'}`}>
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {trendingSongs.map((song) => (
-              <SongCard key={song.id} song={song} />
+              <SongCard key={song.id} song={song} showAlbum compact />
             ))}
           </div>
         </section>
