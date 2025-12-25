@@ -60,9 +60,9 @@ const Search = () => {
               ))}
             </div>
           ) : searchResults && searchResults.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {searchResults.map((song) => (
-                <SongCard key={song.id} song={song} />
+                <SongCard key={song.id} song={song} showAlbum compact />
               ))}
             </div>
           ) : (

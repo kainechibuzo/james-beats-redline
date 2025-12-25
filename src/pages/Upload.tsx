@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { Upload as UploadIcon, Music, X, Image, AlertCircle } from "lucide-react";
+import { Upload as UploadIcon, Music, X, Image, AlertCircle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const GENRES = [
   "Pop", "Rock", "Hip-Hop", "R&B", "Electronic", "Jazz", 
@@ -40,12 +41,34 @@ const Upload = () => {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Set default artist name from profile
+  // Check if user has existing songs to lock artist name
+  const { data: userExistingSongs } = useQuery({
+    queryKey: ["user-existing-songs", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("songs")
+        .select("artist")
+        .eq("user_id", user.id)
+        .limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
+    },
+    enabled: !!user,
+  });
+
+  // Artist name is locked if user has uploaded songs before
+  const lockedArtistName = userExistingSongs?.artist || null;
+  const isArtistLocked = !!lockedArtistName;
+
+  // Set default artist name from profile or locked artist name
   useEffect(() => {
-    if (profile?.display_name && !artist) {
+    if (isArtistLocked && lockedArtistName) {
+      setArtist(lockedArtistName);
+    } else if (profile?.display_name && !artist) {
       setArtist(profile.display_name);
     }
-  }, [profile?.display_name]);
+  }, [profile?.display_name, isArtistLocked, lockedArtistName]);
 
   // Check if artist name is taken by another user
   const checkArtistName = async (artistName: string) => {
@@ -76,6 +99,7 @@ const Upload = () => {
   };
 
   const handleArtistChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isArtistLocked) return; // Prevent changes if artist is locked
     const value = e.target.value;
     setArtist(value);
     setArtistError(null);
@@ -258,16 +282,25 @@ const Upload = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="artist">Artist Name *</Label>
-                  <Input
-                    id="artist"
-                    placeholder="Enter artist name"
-                    value={artist}
-                    onChange={handleArtistChange}
-                    onBlur={handleArtistBlur}
-                    className={artistError ? "border-destructive" : ""}
-                    required
-                  />
+                  <Label htmlFor="artist" className="flex items-center gap-2">
+                    Artist Name *
+                    {isArtistLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="artist"
+                      placeholder="Enter artist name"
+                      value={artist}
+                      onChange={handleArtistChange}
+                      onBlur={handleArtistBlur}
+                      className={`${artistError ? "border-destructive" : ""} ${isArtistLocked ? "bg-muted cursor-not-allowed pr-10" : ""}`}
+                      disabled={isArtistLocked}
+                      required
+                    />
+                    {isArtistLocked && (
+                      <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
                   {isCheckingArtist && (
                     <p className="text-sm text-muted-foreground">Checking availability...</p>
                   )}
@@ -277,9 +310,16 @@ const Upload = () => {
                       {artistError}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    Your artist name will be unique to you once you upload a song
-                  </p>
+                  {isArtistLocked ? (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Artist name locked. Sign out and back in to change it.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Your artist name will be locked once you upload a song
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
