@@ -14,13 +14,11 @@ interface QueuePanelProps {
   trigger?: React.ReactNode;
 }
 
-interface SortableQueueItemProps {
+const SortableQueueItem: React.FC<{
   song: Song;
   index: number;
   onPlay: (song: Song) => void;
-}
-
-const SortableQueueItem = ({ song, index, onPlay }: SortableQueueItemProps) => {
+}> = ({ song, index, onPlay }) => {
   const {
     attributes,
     listeners,
@@ -89,25 +87,17 @@ const QueuePanel = ({ trigger }: QueuePanelProps) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = queue.findIndex((s, i) => `${s.id}-${i}` === active.id);
-      const newIndex = queue.findIndex((s, i) => `${s.id}-${i}` === over.id);
+      const oldIndex = queue.findIndex((s: Song, i: number) => `${s.id}-${i}` === active.id);
+      const newIndex = queue.findIndex((s: Song, i: number) => `${s.id}-${i}` === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1) {
         const newQueue = arrayMove(queue, oldIndex, newIndex);
-        // Preserve current song position
-        if (currentSong) {
-          const currentIndex = newQueue.findIndex(s => s.id === currentSong.id);
-          if (currentIndex !== -1) {
-            setQueue(newQueue);
-          }
-        } else {
-          setQueue(newQueue);
-        }
+        setQueue(newQueue);
       }
     }
   };
 
-  const sortableItems = queue.map((song, index) => `${song.id}-${index}`);
+  const sortableItems = queue.map((song: Song, index: number) => `${song.id}-${index}`);
 
   return (
     <Sheet>
@@ -165,14 +155,17 @@ const QueuePanel = ({ trigger }: QueuePanelProps) => {
               >
                 <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
                   <div className="space-y-1">
-                    {queue.map((song, index) => (
-                      <SortableQueueItem
-                        key={`${song.id}-${index}`}
-                        song={song}
-                        index={index}
-                        onPlay={play}
-                      />
-                    ))}
+                    {queue.map((song: Song, index: number) => {
+                      const itemKey = `${song.id}-${index}`;
+                      return (
+                        <SortableQueueItem
+                          key={itemKey}
+                          song={song}
+                          index={index}
+                          onPlay={play}
+                        />
+                      );
+                    })}
                   </div>
                 </SortableContext>
               </DndContext>
