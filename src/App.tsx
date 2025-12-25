@@ -17,6 +17,7 @@ import RecentlyPlayed from "./pages/RecentlyPlayed";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import PlaylistPage from "./pages/Playlist";
+import Artist from "./pages/Artist";
 
 const queryClient = new QueryClient();
 
