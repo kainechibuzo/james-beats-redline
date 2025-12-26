@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      albums: {
+        Row: {
+          artist: string
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          genre: string | null
+          id: string
+          is_featured: boolean
+          is_public: boolean
+          release_year: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artist: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_featured?: boolean
+          is_public?: boolean
+          release_year?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          artist?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_featured?: boolean
+          is_public?: boolean
+          release_year?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blends: {
         Row: {
           created_at: string
@@ -41,6 +86,36 @@ export type Database = {
           songs?: Json | null
           taste_match_score?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      featured_artists: {
+        Row: {
+          artist_name: string
+          bio: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_verified: boolean | null
+          monthly_listeners: number | null
+        }
+        Insert: {
+          artist_name: string
+          bio?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_verified?: boolean | null
+          monthly_listeners?: number | null
+        }
+        Update: {
+          artist_name?: string
+          bio?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_verified?: boolean | null
+          monthly_listeners?: number | null
         }
         Relationships: []
       }
@@ -437,9 +512,43 @@ export type Database = {
           },
         ]
       }
+      site_analytics: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          new_users: number | null
+          storage_used_mb: number | null
+          total_plays: number | null
+          total_uploads: number | null
+          total_users: number | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          new_users?: number | null
+          storage_used_mb?: number | null
+          total_plays?: number | null
+          total_uploads?: number | null
+          total_users?: number | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          new_users?: number | null
+          storage_used_mb?: number | null
+          total_plays?: number | null
+          total_uploads?: number | null
+          total_users?: number | null
+        }
+        Relationships: []
+      }
       songs: {
         Row: {
           album: string | null
+          album_id: string | null
           artist: string
           cover_url: string | null
           created_at: string
@@ -455,6 +564,7 @@ export type Database = {
         }
         Insert: {
           album?: string | null
+          album_id?: string | null
           artist: string
           cover_url?: string | null
           created_at?: string
@@ -470,6 +580,7 @@ export type Database = {
         }
         Update: {
           album?: string | null
+          album_id?: string | null
           artist?: string
           cover_url?: string | null
           created_at?: string
@@ -481,6 +592,35 @@ export type Database = {
           play_count?: number
           title?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songs_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
@@ -532,9 +672,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       subscription_tier: "free" | "premium" | "artist"
     }
     CompositeTypes: {
@@ -663,6 +810,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       subscription_tier: ["free", "premium", "artist"],
     },
   },

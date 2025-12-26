@@ -20,6 +20,7 @@ import PlaylistPage from "./pages/Playlist";
 import Artist from "./pages/Artist";
 import DJ from "./pages/DJ";
 import YearlyRecap from "./pages/YearlyRecap";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="/artist/:name" element={<Artist />} />
                 <Route path="/dj" element={<DJ />} />
                 <Route path="/recap" element={<YearlyRecap />} />
+                <Route path="/admin" element={<Admin />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
