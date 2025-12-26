@@ -18,6 +18,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import PlaylistPage from "./pages/Playlist";
 import Artist from "./pages/Artist";
+import DJ from "./pages/DJ";
+import YearlyRecap from "./pages/YearlyRecap";
 
 const queryClient = new QueryClient();
 
