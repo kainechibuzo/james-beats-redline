@@ -21,6 +21,7 @@ import Artist from "./pages/Artist";
 import DJ from "./pages/DJ";
 import YearlyRecap from "./pages/YearlyRecap";
 import Admin from "./pages/Admin";
+import Welcome from "./pages/Welcome";
 
 const queryClient = new QueryClient();
 
@@ -33,9 +34,10 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              <Route path="/" element={<Welcome />} />
               <Route path="/auth" element={<Auth />} />
               <Route element={<MainLayout />}>
-                <Route path="/" element={<Home />} />
+                <Route path="/home" element={<Home />} />
                 <Route path="/search" element={<Search />} />
                 <Route
                   path="/library"

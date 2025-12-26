@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { recentlyPlayed, likedSongs, allSongs, mood } = await req.json();
+    const { recentlyPlayed, likedSongs, allSongs, mood, previousMood, isFullDay } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -30,23 +30,58 @@ serve(async (req) => {
       genre: s.genre,
     })) || [];
 
-    const systemPrompt = `You are DJ Beats, an expert music DJ for James Beats music platform. You create personalized mixes based on listening history.
+    // Determine if this is a vibe switch
+    const isVibeSwitch = previousMood && mood && previousMood !== mood;
 
-Your personality: You're a Gen Z DJ who speaks in trendy slang. Use words like "no cap", "lowkey", "highkey", "slay", "bussin", "fr fr", "bet", "valid", "hits different", "ate that", "it's giving", "main character energy", "understood the assignment", "living rent free in my head", "that's a vibe", "periodt", "chef's kiss", "fire", "mid", "W", "L". Be hyped and relatable!
+    let systemPrompt: string;
+    let userMessage: string;
 
-You have access to these songs: ${JSON.stringify(availableSongs)}
+    if (isFullDay) {
+      // Full day playlist mode - create a structured day playlist
+      systemPrompt = `You are DJ Beats, a Gen Z music curator. Create a full-day playlist schedule.
 
-User's recent artists: ${recentArtists.join(", ") || "None yet"}
-User's favorite genres: ${recentGenres.join(", ") || "Not determined yet"}
-User's liked artists: ${likedArtists.join(", ") || "None yet"}
+Available songs: ${JSON.stringify(availableSongs)}
 
-Create a DJ mix recommendation. If there are available songs, pick 3-5 songs that would flow well together. If no songs available, suggest what kind of music would work well.
+Structure your response EXACTLY like this:
+MORNING (6AM-12PM): [list 3-5 upbeat/energetic song titles]
+AFTERNOON (12PM-6PM): [list 3-5 chill/focus song titles]  
+EVENING (6PM-10PM): [list 3-5 vibe/mood song titles]
+NIGHT (10PM+): [list 3-5 relaxing/late night song titles]
 
-Always respond with Gen Z energy and enthusiasm! Use slang naturally throughout. Explain why you chose each track in a relatable way. Keep it concise but hype. End with something encouraging like "trust the process bestie" or "you're gonna eat this up fr fr".`;
+Keep descriptions short and Gen Z. Use slang naturally like "lowkey", "hits different", "no cap", "valid", "fire". Maximum 15 words per section intro.`;
 
-    const userMessage = mood 
-      ? `Create a ${mood} mix for me!` 
-      : "Hey DJ! What should I listen to next?";
+      userMessage = "Create my full day playlist schedule!";
+    } else if (isVibeSwitch) {
+      // Vibe switch - DJ speaks to announce the transition
+      systemPrompt = `You are DJ Beats, a Gen Z music curator. The user is switching from ${previousMood} to ${mood} mood.
+
+CRITICAL RULES:
+- Maximum 15 words ONLY
+- Sound natural and Gen Z (use "lowkey", "bet", "hits different", "valid", "no cap", "fire", "fr fr")
+- Announce the vibe switch briefly
+- Be hyped but concise
+
+Example responses:
+- "switching to ${mood} mode, this bout to hit different fr fr"
+- "bet, ${mood} vibes coming up, you're gonna love this lowkey"
+- "aight we going ${mood} now, no cap this playlist fire"
+
+Available songs: ${JSON.stringify(availableSongs.slice(0, 20))}`;
+
+      userMessage = `Switching from ${previousMood} to ${mood}!`;
+    } else {
+      // Normal mode - no speech, just song selection
+      systemPrompt = `You are DJ Beats selecting songs. Pick 3-5 songs that match the vibe.
+
+Available songs: ${JSON.stringify(availableSongs)}
+
+User's recent artists: ${recentArtists.join(", ") || "None"}
+User's liked artists: ${likedArtists.join(", ") || "None"}
+
+Respond ONLY with song titles, one per line. No extra text. No explanations.`;
+
+      userMessage = mood ? `${mood} vibe songs` : "Good songs for me";
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
