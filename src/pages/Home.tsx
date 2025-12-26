@@ -1,10 +1,12 @@
+import { Link } from "react-router-dom";
 import HeroSection from "@/components/home/HeroSection";
 import SongCard from "@/components/home/SongCard";
 import { useSongs, useRecentlyPlayed } from "@/hooks/useSongs";
+import { useFeaturedAlbums } from "@/hooks/useAlbums";
+import { useFeaturedArtists } from "@/hooks/useAdmin";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Music } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Music, Disc, Users, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -12,14 +14,90 @@ const Home = () => {
   const { user } = useAuth();
   const { data: songs, isLoading: songsLoading } = useSongs();
   const { data: recentlyPlayed, isLoading: recentLoading } = useRecentlyPlayed();
+  const { data: featuredAlbums, isLoading: albumsLoading } = useFeaturedAlbums();
+  const { data: featuredArtists, isLoading: artistsLoading } = useFeaturedArtists();
   const isMobile = useIsMobile();
 
   const featuredSongs = songs?.slice(0, 6) || [];
   const trendingSongs = songs?.slice(0, 4) || [];
 
+  // Get unique artists from songs
+  const uniqueArtists = songs
+    ? Array.from(new Set(songs.map(s => s.artist)))
+        .slice(0, 8)
+        .map(artist => {
+          const song = songs.find(s => s.artist === artist);
+          return { name: artist, cover: song?.cover_url };
+        })
+    : [];
+
   return (
     <div className="pb-32 animate-fade-in">
       <HeroSection />
+
+      {/* Featured Artists */}
+      {uniqueArtists.length > 0 && (
+        <section className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Artists</h2>
+            <Link to="/search">
+              <Button variant="ghost" size="sm" className={isMobile ? 'text-xs px-2' : ''}>
+                See all
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            {uniqueArtists.map((artist) => (
+              <Link
+                key={artist.name}
+                to={`/artist/${encodeURIComponent(artist.name)}`}
+                className="flex flex-col items-center gap-2 min-w-[80px] md:min-w-[100px] hover:opacity-80 transition-opacity"
+              >
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 overflow-hidden flex items-center justify-center">
+                  {artist.cover ? (
+                    <img src={artist.cover} alt={artist.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Users className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+                  )}
+                </div>
+                <span className="text-xs md:text-sm font-medium text-center truncate max-w-[80px] md:max-w-[100px]">
+                  {artist.name}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Featured Albums */}
+      {featuredAlbums && featuredAlbums.length > 0 && (
+        <section className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Albums</h2>
+          </div>
+          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            {featuredAlbums.map((album) => (
+              <div
+                key={album.id}
+                className="min-w-[120px] md:min-w-[160px] cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                <div className="aspect-square rounded-lg bg-muted overflow-hidden mb-2">
+                  {album.cover_url ? (
+                    <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                      <Disc className="w-10 h-10 md:w-12 md:h-12 text-primary/50" />
+                    </div>
+                  )}
+                </div>
+                <p className="font-medium text-sm truncate">{album.title}</p>
+                <p className="text-xs text-muted-foreground truncate">{album.artist}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recently Played - only for logged in users */}
       {user && (
