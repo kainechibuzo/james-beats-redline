@@ -1,5 +1,4 @@
 import HeroSection from "@/components/home/HeroSection";
-import DJSection from "@/components/home/DJSection";
 import SongCard from "@/components/home/SongCard";
 import { useSongs, useRecentlyPlayed } from "@/hooks/useSongs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,8 +20,6 @@ const Home = () => {
   return (
     <div className="pb-32 animate-fade-in">
       <HeroSection />
-      
-      <DJSection />
 
       {/* Recently Played - only for logged in users */}
       {user && (

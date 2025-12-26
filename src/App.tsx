@@ -83,6 +83,8 @@ const App = () => (
                   }
                 />
                 <Route path="/artist/:name" element={<Artist />} />
+                <Route path="/dj" element={<DJ />} />
+                <Route path="/recap" element={<YearlyRecap />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

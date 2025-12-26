@@ -1,4 +1,4 @@
-import { Home, Search, Library, Upload, Heart, Clock, User, LogIn, LogOut, Menu, X } from "lucide-react";
+import { Home, Search, Library, Upload, Heart, Clock, User, LogIn, LogOut, Menu, X, Disc3, Calendar } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,7 @@ const Sidebar = () => {
   const navItems = [
     { icon: Home, label: "Home", path: "/" },
     { icon: Search, label: "Search", path: "/search" },
+    { icon: Disc3, label: "DJ Beats", path: "/dj" },
     { icon: Library, label: "Your Library", path: "/library" },
     { icon: Upload, label: "Upload", path: "/upload" },
   ];
@@ -24,6 +25,7 @@ const Sidebar = () => {
   const libraryItems = [
     { icon: Heart, label: "Liked Songs", path: "/liked" },
     { icon: Clock, label: "Recently Played", path: "/recent" },
+    { icon: Calendar, label: "Year in Music", path: "/recap" },
   ];
 
   const handleSignOut = async () => {
