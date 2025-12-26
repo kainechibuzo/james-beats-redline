@@ -1,17 +1,22 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Disc3, Sparkles, Music, Plus, ListMusic, Mic, MicOff, Volume2, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Disc3, Sparkles, Music, Plus, ListMusic, Mic, MicOff, Volume2, RefreshCw, ThumbsUp, ThumbsDown, Calendar, Sun, Moon, Sunset } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSongs, useRecentlyPlayed, useLikedSongs, Song } from "@/hooks/useSongs";
 import { useCreatePlaylist } from "@/hooks/usePlaylists";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import SongCard from "@/components/home/SongCard";
 
 const MOODS = ["energetic", "chill", "focus", "party", "romantic", "workout", "sad", "happy"];
+
+interface FullDayPlaylist {
+  morning: Song[];
+  afternoon: Song[];
+  evening: Song[];
+  night: Song[];
+}
 
 const DJ = () => {
   const { user } = useAuth();
@@ -19,42 +24,63 @@ const DJ = () => {
   const { data: recentlyPlayed } = useRecentlyPlayed();
   const { data: likedSongs } = useLikedSongs();
   const createPlaylist = useCreatePlaylist();
-  const { play, addToQueue } = usePlayer();
+  const { play } = usePlayer();
   
   const [isLoading, setIsLoading] = useState(false);
   const [djMessage, setDjMessage] = useState("");
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [previousMood, setPreviousMood] = useState<string | null>(null);
   const [suggestedSongs, setSuggestedSongs] = useState<Song[]>([]);
   const [useVoice, setUseVoice] = useState(true);
-  const [voiceFailed, setVoiceFailed] = useState(false);
   const [currentExplanation, setCurrentExplanation] = useState("");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [fullDayPlaylist, setFullDayPlaylist] = useState<FullDayPlaylist | null>(null);
+  const [isFullDayMode, setIsFullDayMode] = useState(false);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Try to speak DJ message using TTS
-  const speakMessage = async (message: string) => {
-    if (!useVoice) return;
+  // Speak DJ message - Gen Z style, natural voice
+  const speakMessage = useCallback((message: string) => {
+    if (!useVoice || !message) return;
+    
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
     
     try {
-      // Use browser's speech synthesis as fallback
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(message);
-        utterance.rate = 1.1;
-        utterance.pitch = 1;
+        utterance.rate = 1.15; // Slightly faster, more natural
+        utterance.pitch = 1.1; // Slightly higher, more youthful
+        utterance.volume = 0.9;
+        
+        // Try to get a younger sounding voice
+        const voices = speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => 
+          v.name.includes('Samantha') || 
+          v.name.includes('Google') ||
+          v.name.includes('Female') ||
+          v.lang.startsWith('en')
+        );
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+        
+        speechRef.current = utterance;
         speechSynthesis.speak(utterance);
       }
     } catch (error) {
       console.error("Voice failed:", error);
-      setVoiceFailed(true);
-      toast.info("DJ switched to text mode");
     }
-  };
+  }, [useVoice]);
 
-  const getDJMix = useCallback(async (mood?: string) => {
+  const getDJMix = useCallback(async (mood?: string, isFullDay = false) => {
     setIsLoading(true);
     setDjMessage("");
     setSuggestedSongs([]);
     setCurrentExplanation("");
-    setVoiceFailed(false);
+    setFullDayPlaylist(null);
+    setIsFullDayMode(isFullDay);
+    
+    // Detect vibe switch
+    const isVibeSwitch = previousMood && mood && previousMood !== mood;
     
     try {
       const response = await fetch(
@@ -70,6 +96,8 @@ const DJ = () => {
             likedSongs: likedSongs || [],
             allSongs: songs || [],
             mood,
+            previousMood: isVibeSwitch ? previousMood : null,
+            isFullDay,
           }),
         }
       );
@@ -125,41 +153,98 @@ const DJ = () => {
         }
       }
 
-      // Extract song suggestions
-      if (songs && songs.length > 0) {
-        const suggested = songs.filter(song => 
-          fullMessage.toLowerCase().includes(song.title.toLowerCase()) ||
-          fullMessage.toLowerCase().includes(song.artist.toLowerCase())
-        ).slice(0, 5);
-        setSuggestedSongs(suggested);
-        
-        // Generate explanation for first song
-        if (suggested.length > 0) {
-          setCurrentExplanation(`This track matches your ${mood || 'current'} vibe perfectly based on your listening history.`);
+      // Process full day playlist
+      if (isFullDay && songs) {
+        const dayPlaylist: FullDayPlaylist = {
+          morning: [],
+          afternoon: [],
+          evening: [],
+          night: [],
+        };
+
+        // Parse the response to extract songs for each time period
+        const morningMatch = fullMessage.match(/MORNING.*?:(.*?)(?=AFTERNOON|$)/is);
+        const afternoonMatch = fullMessage.match(/AFTERNOON.*?:(.*?)(?=EVENING|$)/is);
+        const eveningMatch = fullMessage.match(/EVENING.*?:(.*?)(?=NIGHT|$)/is);
+        const nightMatch = fullMessage.match(/NIGHT.*?:(.*?)$/is);
+
+        const findSongsInText = (text: string | undefined): Song[] => {
+          if (!text) return [];
+          return songs.filter(song => 
+            text.toLowerCase().includes(song.title.toLowerCase())
+          ).slice(0, 5);
+        };
+
+        dayPlaylist.morning = findSongsInText(morningMatch?.[1]) || songs.slice(0, 3);
+        dayPlaylist.afternoon = findSongsInText(afternoonMatch?.[1]) || songs.slice(3, 6);
+        dayPlaylist.evening = findSongsInText(eveningMatch?.[1]) || songs.slice(6, 9);
+        dayPlaylist.night = findSongsInText(nightMatch?.[1]) || songs.slice(9, 12);
+
+        // Fallback if no songs found
+        if (dayPlaylist.morning.length === 0) dayPlaylist.morning = songs.slice(0, 3);
+        if (dayPlaylist.afternoon.length === 0) dayPlaylist.afternoon = songs.slice(3, 6);
+        if (dayPlaylist.evening.length === 0) dayPlaylist.evening = songs.slice(6, 9);
+        if (dayPlaylist.night.length === 0) dayPlaylist.night = songs.slice(9, 12);
+
+        setFullDayPlaylist(dayPlaylist);
+      } else {
+        // Extract song suggestions for regular mode
+        if (songs && songs.length > 0) {
+          const suggested = songs.filter(song => 
+            fullMessage.toLowerCase().includes(song.title.toLowerCase()) ||
+            fullMessage.toLowerCase().includes(song.artist.toLowerCase())
+          ).slice(0, 5);
+          
+          // Fallback to random songs if none matched
+          setSuggestedSongs(suggested.length > 0 ? suggested : songs.slice(0, 5));
         }
       }
 
-      // Speak the message if voice is enabled
-      if (useVoice && fullMessage) {
+      // Only speak on vibe switch
+      if (isVibeSwitch && fullMessage) {
         speakMessage(fullMessage);
+      }
+
+      // Update previous mood
+      if (mood) {
+        setPreviousMood(mood);
       }
 
     } catch (error) {
       console.error("DJ error:", error);
       toast.error("DJ is taking a break. Try again!");
-      // Always provide a fallback text response
-      setDjMessage("Yo! Looks like I'm having some technical difficulties, but I'm still here for you! Let me suggest some tracks based on your vibe...");
+      setDjMessage("lowkey having tech issues but we good, here's some fire tracks fr");
       if (songs && songs.length > 0) {
-        const randomSongs = songs.slice(0, 5);
-        setSuggestedSongs(randomSongs);
+        setSuggestedSongs(songs.slice(0, 5));
       }
     } finally {
       setIsLoading(false);
     }
-  }, [songs, recentlyPlayed, likedSongs, useVoice]);
+  }, [songs, recentlyPlayed, likedSongs, previousMood, speakMessage]);
+
+  const handleMoodSelect = (mood: string) => {
+    setSelectedMood(mood);
+    getDJMix(mood);
+  };
+
+  const handleFullDayPlaylist = () => {
+    setSelectedMood(null);
+    getDJMix(undefined, true);
+  };
 
   const handleSaveAsPlaylist = async () => {
-    const songsToSave = suggestedSongs.length > 0 ? suggestedSongs : songs?.slice(0, 5) || [];
+    let songsToSave: Song[] = [];
+    
+    if (fullDayPlaylist) {
+      songsToSave = [
+        ...fullDayPlaylist.morning,
+        ...fullDayPlaylist.afternoon,
+        ...fullDayPlaylist.evening,
+        ...fullDayPlaylist.night,
+      ];
+    } else {
+      songsToSave = suggestedSongs.length > 0 ? suggestedSongs : songs?.slice(0, 5) || [];
+    }
     
     if (!songsToSave.length) {
       toast.error("No songs available to create playlist");
@@ -168,8 +253,10 @@ const DJ = () => {
 
     try {
       await createPlaylist.mutateAsync({
-        name: `DJ Mix - ${selectedMood || "Custom"}`,
-        description: `AI-generated ${selectedMood || "custom"} playlist by DJ Beats`,
+        name: isFullDayMode ? "DJ Full Day Mix" : `DJ Mix - ${selectedMood || "Custom"}`,
+        description: isFullDayMode 
+          ? "AI-generated full day playlist by DJ Beats"
+          : `AI-generated ${selectedMood || "custom"} playlist by DJ Beats`,
         songIds: songsToSave.map(s => s.id),
       });
       toast.success("DJ playlist created!");
@@ -180,27 +267,56 @@ const DJ = () => {
 
   const handlePlaySuggested = (song: Song) => {
     play(song);
-    setCurrentExplanation(`Playing "${song.title}" - this track fits your ${selectedMood || 'current'} mood.`);
   };
 
   const handleSkip = () => {
     if (suggestedSongs.length > 1) {
-      const remaining = suggestedSongs.slice(1);
-      setSuggestedSongs(remaining);
-      setCurrentExplanation(`Skipped! Here's another pick that matches your taste.`);
+      setSuggestedSongs(suggestedSongs.slice(1));
     } else {
       getDJMix(selectedMood || undefined);
     }
   };
 
   const handleLikeSuggestion = () => {
-    toast.success("Got it! I'll find more tracks like this.");
+    toast.success("bet, finding more like this");
   };
 
   const handleDislikeSuggestion = () => {
-    toast.info("Noted! Refining my recommendations...");
+    toast.info("no cap, skipping that one");
     handleSkip();
   };
+
+  const renderTimeSection = (title: string, icon: React.ReactNode, songs: Song[], gradient: string) => (
+    <div className={`rounded-xl p-4 ${gradient} border border-border mb-4`}>
+      <h3 className="font-semibold mb-3 flex items-center gap-2">
+        {icon}
+        {title}
+      </h3>
+      <div className="space-y-2">
+        {songs.map((song) => (
+          <div
+            key={song.id}
+            className="flex items-center gap-3 p-2 rounded-lg bg-background/50 hover:bg-background/80 cursor-pointer transition-colors"
+            onClick={() => handlePlaySuggested(song)}
+          >
+            <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0">
+              {song.cover_url ? (
+                <img src={song.cover_url} alt={song.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                  <Music className="w-4 h-4 text-primary/50" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate text-sm">{song.title}</p>
+              <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   if (!user) {
     return (
@@ -209,7 +325,7 @@ const DJ = () => {
           <Disc3 className="w-10 h-10 text-primary-foreground" />
         </div>
         <h1 className="text-2xl font-bold mb-2">DJ Beats</h1>
-        <p className="text-muted-foreground mb-6">Sign in to get personalized DJ mixes based on your listening history!</p>
+        <p className="text-muted-foreground mb-6">Sign in to get personalized DJ mixes!</p>
         <Button variant="glow" asChild>
           <a href="/auth">Sign In</a>
         </Button>
@@ -231,7 +347,7 @@ const DJ = () => {
               <Sparkles className="w-5 h-5 text-primary" />
             </h1>
             <p className="text-sm text-muted-foreground">
-              Your AI-powered music curator
+              your AI music curator fr fr
             </p>
           </div>
           
@@ -248,25 +364,14 @@ const DJ = () => {
           </div>
         </div>
 
-        {/* Voice Status */}
-        {voiceFailed && (
-          <div className="bg-secondary/50 rounded-lg p-3 mb-4 text-sm text-muted-foreground flex items-center gap-2">
-            <MicOff className="w-4 h-4" />
-            Voice unavailable - showing text responses
-          </div>
-        )}
-
         {/* Mood Selection */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-4">
           {MOODS.map(mood => (
             <Button
               key={mood}
               variant={selectedMood === mood ? "glow" : "secondary"}
               size="sm"
-              onClick={() => {
-                setSelectedMood(mood);
-                getDJMix(mood);
-              }}
+              onClick={() => handleMoodSelect(mood)}
               disabled={isLoading}
               className="capitalize"
             >
@@ -287,29 +392,56 @@ const DJ = () => {
           </Button>
         </div>
 
+        {/* Full Day Playlist Button */}
+        <Button
+          variant="glow"
+          size="sm"
+          onClick={handleFullDayPlaylist}
+          disabled={isLoading}
+          className="w-full gap-2"
+        >
+          <Calendar className="w-4 h-4" />
+          Mix Full Day Playlist
+        </Button>
+
         {/* Loading State */}
         {isLoading && !djMessage && (
-          <div className="flex items-center gap-3 text-muted-foreground p-4 bg-background/50 rounded-lg">
+          <div className="flex items-center gap-3 text-muted-foreground p-4 bg-background/50 rounded-lg mt-4">
             <Disc3 className="w-5 h-5 animate-spin" />
             <span>DJ is mixing your tracks...</span>
           </div>
         )}
 
-        {/* DJ Message */}
-        {djMessage && (
-          <div className="bg-background/50 rounded-lg p-4 border border-border">
+        {/* DJ Message - Only shown on vibe switch */}
+        {djMessage && previousMood && selectedMood && previousMood !== selectedMood && (
+          <div className="bg-background/50 rounded-lg p-4 border border-border mt-4">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
                 <Volume2 className="w-4 h-4 text-primary" />
               </div>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap flex-1">{djMessage}</p>
+              <p className="text-sm leading-relaxed flex-1">{djMessage}</p>
             </div>
           </div>
         )}
       </div>
 
+      {/* Full Day Playlist View */}
+      {fullDayPlaylist && (
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Your Full Day Mix
+          </h2>
+          
+          {renderTimeSection("Morning (6AM-12PM)", <Sun className="w-4 h-4 text-yellow-500" />, fullDayPlaylist.morning, "bg-gradient-to-r from-yellow-500/10 to-orange-500/10")}
+          {renderTimeSection("Afternoon (12PM-6PM)", <Sun className="w-4 h-4 text-orange-500" />, fullDayPlaylist.afternoon, "bg-gradient-to-r from-orange-500/10 to-red-500/10")}
+          {renderTimeSection("Evening (6PM-10PM)", <Sunset className="w-4 h-4 text-purple-500" />, fullDayPlaylist.evening, "bg-gradient-to-r from-purple-500/10 to-pink-500/10")}
+          {renderTimeSection("Night (10PM+)", <Moon className="w-4 h-4 text-blue-500" />, fullDayPlaylist.night, "bg-gradient-to-r from-blue-500/10 to-indigo-500/10")}
+        </div>
+      )}
+
       {/* Current Recommendation */}
-      {suggestedSongs.length > 0 && (
+      {suggestedSongs.length > 0 && !fullDayPlaylist && (
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <ListMusic className="w-5 h-5" />
@@ -377,7 +509,7 @@ const DJ = () => {
       )}
 
       {/* Suggested Tracks List */}
-      {suggestedSongs.length > 1 && (
+      {suggestedSongs.length > 1 && !fullDayPlaylist && (
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4">Up Next</h2>
           <div className="space-y-2">
@@ -408,7 +540,7 @@ const DJ = () => {
       )}
 
       {/* Add to Playlist */}
-      {suggestedSongs.length > 0 && (
+      {(suggestedSongs.length > 0 || fullDayPlaylist) && (
         <div className="fixed bottom-28 left-0 right-0 px-4 z-30">
           <Button
             variant="glow"
@@ -417,7 +549,7 @@ const DJ = () => {
             disabled={createPlaylist.isPending}
           >
             <Plus className="w-4 h-4" />
-            {createPlaylist.isPending ? "Creating..." : "Add DJ Playlist"}
+            {createPlaylist.isPending ? "Creating..." : isFullDayMode ? "Save Full Day Playlist" : "Add DJ Playlist"}
           </Button>
         </div>
       )}
