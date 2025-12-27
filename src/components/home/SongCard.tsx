@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Play, Heart, MoreVertical, Trash2, ListPlus, ListMusic, User } from "lucide-react";
+import { Play, Heart, MoreVertical, Trash2, ListPlus, ListMusic, User, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Song, useToggleLike, useIsLiked } from "@/hooks/useSongs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDeleteSong } from "@/hooks/useDeleteSong";
 import AddToPlaylistDialog from "@/components/playlist/AddToPlaylistDialog";
+import EditSongDialog from "@/components/songs/EditSongDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,7 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
   const deleteSong = useDeleteSong();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [playlistDialogOpen, setPlaylistDialogOpen] = React.useState(false);
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
 
   // Determine size based on compact prop and mobile
   const isSmall = compact || isMobile;
@@ -129,6 +131,12 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
                     View artist
                   </Link>
                 </DropdownMenuItem>
+                {isOwner && (
+                  <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit song
+                  </DropdownMenuItem>
+                )}
                 {(isOwner || showDelete) && (
                   <DropdownMenuItem 
                     className="text-destructive focus:text-destructive"
@@ -189,6 +197,13 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
           }
         />
       )}
+
+      {/* Edit song dialog */}
+      <EditSongDialog
+        song={song}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </>
   );
 };

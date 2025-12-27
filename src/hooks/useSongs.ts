@@ -172,3 +172,48 @@ export const useIsLiked = (songId: string | undefined) => {
     enabled: !!user && !!songId,
   });
 };
+
+export const useUpdateSong = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Song> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("songs")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Song;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["songs"] });
+      queryClient.invalidateQueries({ queryKey: ["album-songs"] });
+      queryClient.invalidateQueries({ queryKey: ["recently-played"] });
+      queryClient.invalidateQueries({ queryKey: ["liked-songs"] });
+    },
+  });
+};
+
+export const useUpdateSongOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (songs: { id: string; position: number }[]) => {
+      // Update each song's created_at to enforce order (workaround for ordering)
+      for (const song of songs) {
+        const newDate = new Date(2020, 0, 1, 0, 0, song.position).toISOString();
+        const { error } = await supabase
+          .from("songs")
+          .update({ created_at: newDate })
+          .eq("id", song.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["album-songs"] });
+    },
+  });
+};
