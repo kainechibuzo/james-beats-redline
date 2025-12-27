@@ -348,3 +348,293 @@ export const useFeaturedArtists = () => {
     },
   });
 };
+
+// 1. Get genre distribution
+export const useGenreDistribution = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["genre-distribution"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("songs")
+        .select("genre");
+
+      if (error) throw error;
+
+      const genreCounts: Record<string, number> = {};
+      data?.forEach((song) => {
+        const genre = song.genre || "Unknown";
+        genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+      });
+
+      return Object.entries(genreCounts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8);
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 2. Get top artists by song count
+export const useTopArtists = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["top-artists"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("songs")
+        .select("artist");
+
+      if (error) throw error;
+
+      const artistCounts: Record<string, number> = {};
+      data?.forEach((song) => {
+        artistCounts[song.artist] = (artistCounts[song.artist] || 0) + 1;
+      });
+
+      return Object.entries(artistCounts)
+        .map(([artist, songs]) => ({ artist, songs }))
+        .sort((a, b) => b.songs - a.songs)
+        .slice(0, 10);
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 3. Get plays by genre
+export const usePlaysByGenre = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["plays-by-genre"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("songs")
+        .select("genre, play_count");
+
+      if (error) throw error;
+
+      const genrePlays: Record<string, number> = {};
+      data?.forEach((song) => {
+        const genre = song.genre || "Unknown";
+        genrePlays[genre] = (genrePlays[genre] || 0) + (song.play_count || 0);
+      });
+
+      return Object.entries(genrePlays)
+        .map(([genre, plays]) => ({ genre, plays }))
+        .sort((a, b) => b.plays - a.plays)
+        .slice(0, 8);
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 4. Get upload activity by day of week
+export const useUploadsByDayOfWeek = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["uploads-by-day"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("songs")
+        .select("created_at");
+
+      if (error) throw error;
+
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const dayCounts = days.map((day) => ({ day, uploads: 0 }));
+
+      data?.forEach((song) => {
+        const dayIndex = new Date(song.created_at).getDay();
+        dayCounts[dayIndex].uploads += 1;
+      });
+
+      return dayCounts;
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 5. Get playlist creation trends
+export const usePlaylistTrends = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["playlist-trends"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("playlists")
+        .select("created_at")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const monthlyCounts: Record<string, number> = {};
+      data?.forEach((playlist) => {
+        const date = new Date(playlist.created_at);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        monthlyCounts[monthKey] = (monthlyCounts[monthKey] || 0) + 1;
+      });
+
+      return Object.entries(monthlyCounts)
+        .slice(-12)
+        .map(([month, count]) => ({
+          month: new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+          playlists: count,
+        }));
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 6. Get user engagement (likes per day)
+export const useLikesTrends = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["likes-trends"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("liked_songs")
+        .select("created_at")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const dailyCounts: Record<string, number> = {};
+      data?.forEach((like) => {
+        const date = new Date(like.created_at).toISOString().split("T")[0];
+        dailyCounts[date] = (dailyCounts[date] || 0) + 1;
+      });
+
+      return Object.entries(dailyCounts)
+        .slice(-30)
+        .map(([date, count]) => ({
+          date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          likes: count,
+        }));
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 7. Get recently played activity
+export const useRecentlyPlayedTrends = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["recently-played-trends"],
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data, error } = await supabase
+        .from("recently_played")
+        .select("played_at")
+        .gte("played_at", thirtyDaysAgo.toISOString())
+        .order("played_at", { ascending: true });
+
+      if (error) throw error;
+
+      const dailyCounts: Record<string, number> = {};
+      data?.forEach((play) => {
+        const date = new Date(play.played_at).toISOString().split("T")[0];
+        dailyCounts[date] = (dailyCounts[date] || 0) + 1;
+      });
+
+      return Object.entries(dailyCounts).map(([date, count]) => ({
+        date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        plays: count,
+      }));
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 8. Get subscription tier breakdown
+export const useSubscriptionTiers = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["subscription-tiers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("subscription_tier");
+
+      if (error) throw error;
+
+      const tierCounts: Record<string, number> = {};
+      data?.forEach((profile) => {
+        const tier = profile.subscription_tier || "free";
+        tierCounts[tier] = (tierCounts[tier] || 0) + 1;
+      });
+
+      return Object.entries(tierCounts).map(([name, value]) => ({ name, value }));
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 9. Get top songs by play count
+export const useTopSongs = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["top-songs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("songs")
+        .select("title, artist, play_count")
+        .order("play_count", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data?.map((song) => ({
+        name: `${song.title} - ${song.artist}`.slice(0, 30),
+        plays: song.play_count || 0,
+      }));
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// 10. Get follower network stats
+export const useFollowerStats = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["follower-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("created_at")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const dailyCounts: Record<string, number> = {};
+      data?.forEach((follow) => {
+        const date = new Date(follow.created_at).toISOString().split("T")[0];
+        dailyCounts[date] = (dailyCounts[date] || 0) + 1;
+      });
+
+      let cumulative = 0;
+      return Object.entries(dailyCounts)
+        .slice(-30)
+        .map(([date, count]) => {
+          cumulative += count;
+          return {
+            date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            follows: count,
+            total: cumulative,
+          };
+        });
+    },
+    enabled: !!isAdmin,
+  });
+};
