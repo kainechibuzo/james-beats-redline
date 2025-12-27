@@ -1,23 +1,46 @@
-import { useParams, Link } from "react-router-dom";
-import { useAlbum, useAlbumSongs } from "@/hooks/useAlbums";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useAlbum, useAlbumSongs, useDeleteAlbum } from "@/hooks/useAlbums";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLikedAlbums, useToggleAlbumLike } from "@/hooks/useAlbumLikes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Disc, Play, Music, ArrowLeft, Shuffle } from "lucide-react";
+import { Disc, Play, Music, ArrowLeft, Shuffle, Heart, ListPlus, Trash2, UserPlus } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
 import DraggableTrackList from "@/components/album/DraggableTrackList";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Album = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: album, isLoading: albumLoading } = useAlbum(id || "");
   const { data: songs, isLoading: songsLoading } = useAlbumSongs(id || "");
-  const { playSong, setQueue } = usePlayer();
+  const { play, setQueue, addToQueue } = usePlayer();
+  const deleteAlbum = useDeleteAlbum();
+  const { data: likedAlbums } = useLikedAlbums();
+  const { toggle: toggleLike, isPending: likePending } = useToggleAlbumLike();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const isOwner = user?.id === album?.user_id;
+  const isLiked = likedAlbums?.includes(id || "") ?? false;
 
   const handlePlayAll = () => {
     if (songs && songs.length > 0) {
       setQueue(songs);
-      playSong(songs[0]);
+      play(songs[0]);
     }
   };
 
@@ -25,8 +48,40 @@ const Album = () => {
     if (songs && songs.length > 0) {
       const shuffled = [...songs].sort(() => Math.random() - 0.5);
       setQueue(shuffled);
-      playSong(shuffled[0]);
+      play(shuffled[0]);
     }
+  };
+
+  const handleAddToQueue = () => {
+    if (songs && songs.length > 0) {
+      songs.forEach((song) => addToQueue(song));
+      toast.success(`Added ${songs.length} songs to queue`);
+    }
+  };
+
+  const handleLike = () => {
+    if (!user) {
+      toast.error("Please sign in to like albums");
+      return;
+    }
+    toggleLike(id || "");
+  };
+
+  const handleDelete = () => {
+    deleteAlbum.mutate(id || "", {
+      onSuccess: () => {
+        navigate("/albums");
+      },
+    });
+    setDeleteDialogOpen(false);
+  };
+
+  const handleFollowArtist = () => {
+    if (!user) {
+      toast.error("Please sign in to follow artists");
+      return;
+    }
+    navigate(`/artist/${encodeURIComponent(album?.artist || "")}`);
   };
 
   const totalDuration = songs?.reduce((acc, song) => acc + (song.duration || 0), 0) || 0;
@@ -109,7 +164,7 @@ const Album = () => {
       </div>
 
       {/* Play Controls */}
-      <div className="flex gap-4 mb-8">
+      <div className="flex flex-wrap gap-3 mb-8">
         <Button variant="glow" size="lg" onClick={handlePlayAll} disabled={!songs?.length}>
           <Play className="w-5 h-5 mr-2" />
           Play All
@@ -118,6 +173,34 @@ const Album = () => {
           <Shuffle className="w-5 h-5 mr-2" />
           Shuffle
         </Button>
+        <Button 
+          variant="outline" 
+          size="lg" 
+          onClick={handleLike}
+          disabled={likePending}
+        >
+          <Heart className={`w-5 h-5 mr-2 ${isLiked ? "fill-primary text-primary" : ""}`} />
+          {isLiked ? "Liked" : "Like"}
+        </Button>
+        <Button variant="outline" size="lg" onClick={handleAddToQueue} disabled={!songs?.length}>
+          <ListPlus className="w-5 h-5 mr-2" />
+          Add to Queue
+        </Button>
+        <Button variant="outline" size="lg" onClick={handleFollowArtist}>
+          <UserPlus className="w-5 h-5 mr-2" />
+          View Artist
+        </Button>
+        {isOwner && (
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="w-5 h-5 mr-2" />
+            Delete
+          </Button>
+        )}
       </div>
 
       {/* Songs List */}
@@ -147,6 +230,22 @@ const Album = () => {
           <p>No songs in this album yet</p>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete album?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{album?.title}". Songs in this album will not be deleted but will be unlinked from the album. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
