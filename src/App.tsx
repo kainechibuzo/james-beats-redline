@@ -9,6 +9,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
 import Home from "./pages/Home";
 import Search from "./pages/Search";
+import Albums from "./pages/Albums";
+import Album from "./pages/Album";
 import Library from "./pages/Library";
 import Upload from "./pages/Upload";
 import Profile from "./pages/Profile";
@@ -88,6 +90,8 @@ const App = () => (
                   }
                 />
                 <Route path="/artist/:name" element={<Artist />} />
+                <Route path="/albums" element={<Albums />} />
+                <Route path="/album/:id" element={<Album />} />
                 <Route path="/dj" element={<DJ />} />
                 <Route path="/recap" element={<YearlyRecap />} />
                 <Route path="/admin" element={<Admin />} />
