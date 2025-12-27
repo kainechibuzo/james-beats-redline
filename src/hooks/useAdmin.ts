@@ -87,7 +87,7 @@ export const useSiteAnalytics = (days = 30) => {
         .from("site_analytics")
         .select("*")
         .gte("date", startDate.toISOString().split("T")[0])
-        .order("date", { ascending: false });
+        .order("date", { ascending: true });
 
       if (error) throw error;
       return data as SiteAnalytics[];
@@ -95,6 +95,123 @@ export const useSiteAnalytics = (days = 30) => {
     enabled: !!isAdmin,
   });
 };
+
+// Get user growth trends for charts (admin only)
+export const useUserGrowthTrends = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["user-growth-trends"],
+    queryFn: async () => {
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("created_at")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      // Group by date for daily counts
+      const dailyCounts: Record<string, number> = {};
+      const weeklyCounts: Record<string, number> = {};
+      const monthlyCounts: Record<string, number> = {};
+
+      profiles?.forEach((profile) => {
+        const date = new Date(profile.created_at);
+        const dayKey = date.toISOString().split("T")[0];
+        const weekKey = getWeekKey(date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+        dailyCounts[dayKey] = (dailyCounts[dayKey] || 0) + 1;
+        weeklyCounts[weekKey] = (weeklyCounts[weekKey] || 0) + 1;
+        monthlyCounts[monthKey] = (monthlyCounts[monthKey] || 0) + 1;
+      });
+
+      // Convert to arrays for charts
+      const daily = Object.entries(dailyCounts)
+        .slice(-30)
+        .map(([date, count]) => ({
+          date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          users: count,
+          cumulative: 0,
+        }));
+
+      const weekly = Object.entries(weeklyCounts)
+        .slice(-12)
+        .map(([week, count]) => ({
+          week,
+          users: count,
+        }));
+
+      const monthly = Object.entries(monthlyCounts)
+        .slice(-12)
+        .map(([month, count]) => ({
+          month: new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+          users: count,
+        }));
+
+      // Calculate cumulative for daily
+      let cumulative = 0;
+      daily.forEach((d) => {
+        cumulative += d.users;
+        d.cumulative = cumulative;
+      });
+
+      return { daily, weekly, monthly };
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// Get storage trends (admin only)
+export const useStorageTrends = () => {
+  const { data: isAdmin } = useIsAdmin();
+
+  return useQuery({
+    queryKey: ["storage-trends"],
+    queryFn: async () => {
+      const { data: songs, error: songsError } = await supabase
+        .from("songs")
+        .select("created_at")
+        .order("created_at", { ascending: true });
+
+      if (songsError) throw songsError;
+
+      // Group songs by month
+      const monthlySongs: Record<string, number> = {};
+      songs?.forEach((song) => {
+        const date = new Date(song.created_at);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        monthlySongs[monthKey] = (monthlySongs[monthKey] || 0) + 1;
+      });
+
+      // Calculate cumulative storage (estimate ~5MB per song)
+      const storageData = Object.entries(monthlySongs)
+        .slice(-12)
+        .map(([month, count]) => ({
+          month: new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+          songs: count,
+          storageMB: count * 5,
+        }));
+
+      let cumulativeStorage = 0;
+      storageData.forEach((d) => {
+        cumulativeStorage += d.storageMB;
+        d.storageMB = cumulativeStorage;
+      });
+
+      return storageData;
+    },
+    enabled: !!isAdmin,
+  });
+};
+
+// Helper function to get week key
+function getWeekKey(date: Date): string {
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+  const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+  return `${date.getFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
+}
 
 // Get total counts for admin dashboard
 export const useAdminStats = () => {
