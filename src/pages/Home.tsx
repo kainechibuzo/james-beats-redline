@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import HeroSection from "@/components/home/HeroSection";
 import SongCard from "@/components/home/SongCard";
-import DJSection from "@/components/home/DJSection";
 import { useSongs, useRecentlyPlayed } from "@/hooks/useSongs";
 import { useAlbums, useFeaturedAlbums } from "@/hooks/useAlbums";
 import { useFeaturedArtists } from "@/hooks/useAdmin";
@@ -48,9 +47,6 @@ const Home = () => {
   return (
     <div className="pb-32 animate-fade-in">
       <HeroSection />
-
-      {/* DJ Section */}
-      <DJSection />
 
       {/* Featured Artists */}
       {uniqueArtists.length > 0 && (
