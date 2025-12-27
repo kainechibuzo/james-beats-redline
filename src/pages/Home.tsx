@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
 import HeroSection from "@/components/home/HeroSection";
 import SongCard from "@/components/home/SongCard";
+import DJSection from "@/components/home/DJSection";
 import { useSongs, useRecentlyPlayed } from "@/hooks/useSongs";
-import { useFeaturedAlbums } from "@/hooks/useAlbums";
+import { useAlbums, useFeaturedAlbums } from "@/hooks/useAlbums";
 import { useFeaturedArtists } from "@/hooks/useAdmin";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Music, Disc, Users, ChevronRight } from "lucide-react";
+import { Music, Disc, Users, ChevronRight, Play, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -15,11 +17,14 @@ const Home = () => {
   const { data: songs, isLoading: songsLoading } = useSongs();
   const { data: recentlyPlayed, isLoading: recentLoading } = useRecentlyPlayed();
   const { data: featuredAlbums, isLoading: albumsLoading } = useFeaturedAlbums();
+  const { data: allAlbums } = useAlbums();
   const { data: featuredArtists, isLoading: artistsLoading } = useFeaturedArtists();
+  const { playSong } = usePlayer();
   const isMobile = useIsMobile();
 
   const featuredSongs = songs?.slice(0, 6) || [];
   const trendingSongs = songs?.slice(0, 4) || [];
+  const recentAlbums = allAlbums?.slice(0, 6) || [];
 
   // Get unique artists from songs
   const uniqueArtists = songs
@@ -31,9 +36,21 @@ const Home = () => {
         })
     : [];
 
+  const handlePlayAlbum = (albumTitle: string, artistName: string) => {
+    const albumSongs = songs?.filter(
+      song => song.album === albumTitle && song.artist === artistName
+    ) || [];
+    if (albumSongs.length > 0) {
+      playSong(albumSongs[0], albumSongs);
+    }
+  };
+
   return (
     <div className="pb-32 animate-fade-in">
       <HeroSection />
+
+      {/* DJ Section */}
+      <DJSection />
 
       {/* Featured Artists */}
       {uniqueArtists.length > 0 && (
@@ -70,26 +87,41 @@ const Home = () => {
         </section>
       )}
 
-      {/* Featured Albums */}
-      {featuredAlbums && featuredAlbums.length > 0 && (
+      {/* Albums Section */}
+      {(featuredAlbums?.length || recentAlbums?.length) ? (
         <section className="mb-6 md:mb-8">
           <div className="flex items-center justify-between mb-3 md:mb-4">
-            <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Albums</h2>
+            <h2 className={`font-bold flex items-center gap-2 ${isMobile ? 'text-lg' : 'text-2xl'}`}>
+              <FolderOpen className="w-5 h-5 text-primary" />
+              Albums
+            </h2>
+            <Link to="/albums">
+              <Button variant="ghost" size="sm" className={isMobile ? 'text-xs px-2' : ''}>
+                Browse all
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
           </div>
-          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {featuredAlbums.map((album) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4">
+            {(featuredAlbums?.length ? featuredAlbums : recentAlbums).slice(0, 6).map((album) => (
               <div
                 key={album.id}
-                className="min-w-[120px] md:min-w-[160px] cursor-pointer hover:opacity-80 transition-opacity"
+                className="group cursor-pointer"
+                onClick={() => handlePlayAlbum(album.title, album.artist)}
               >
-                <div className="aspect-square rounded-lg bg-muted overflow-hidden mb-2">
+                <div className="aspect-square rounded-lg bg-muted overflow-hidden mb-2 relative">
                   {album.cover_url ? (
-                    <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover" />
+                    <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                       <Disc className="w-10 h-10 md:w-12 md:h-12 text-primary/50" />
                     </div>
                   )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+                      <Play className="w-6 h-6 text-primary-foreground ml-0.5" />
+                    </div>
+                  </div>
                 </div>
                 <p className="font-medium text-sm truncate">{album.title}</p>
                 <p className="text-xs text-muted-foreground truncate">{album.artist}</p>
@@ -97,7 +129,7 @@ const Home = () => {
             ))}
           </div>
         </section>
-      )}
+      ) : null}
 
       {/* Recently Played - only for logged in users */}
       {user && (
