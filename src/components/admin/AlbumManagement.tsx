@@ -3,13 +3,25 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Disc, Star, Music } from "lucide-react";
-import { useAlbums } from "@/hooks/useAlbums";
+import { Disc, Star, Music, Trash2 } from "lucide-react";
+import { useAlbums, useDeleteAlbum } from "@/hooks/useAlbums";
 import { useToggleAlbumFeatured } from "@/hooks/useArtistPromotion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const AlbumManagement = () => {
   const { data: albums } = useAlbums();
   const toggleFeatured = useToggleAlbumFeatured();
+  const deleteAlbum = useDeleteAlbum();
 
   return (
     <Card>
@@ -66,6 +78,30 @@ const AlbumManagement = () => {
                     }
                     disabled={toggleFeatured.isPending}
                   />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Album</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{album.title}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteAlbum.mutate(album.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             ))}
