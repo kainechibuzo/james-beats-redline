@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -30,6 +29,8 @@ import {
   Calendar, BarChart3, HardDrive, AlertTriangle, Heart, 
   ListMusic, Play, UserPlus, PieChart
 } from "lucide-react";
+import AlbumManagement from "@/components/admin/AlbumManagement";
+import ArtistPromotion from "@/components/admin/ArtistPromotion";
 import {
   LineChart,
   Line,
@@ -697,7 +698,7 @@ const Admin = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="users" className="gap-2">
             <Users className="w-4 h-4" />
             Users
@@ -705,6 +706,14 @@ const Admin = () => {
           <TabsTrigger value="artists" className="gap-2">
             <Music className="w-4 h-4" />
             Featured Artists
+          </TabsTrigger>
+          <TabsTrigger value="albums" className="gap-2">
+            <Disc className="w-4 h-4" />
+            Albums
+          </TabsTrigger>
+          <TabsTrigger value="promote" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Promote Artists
           </TabsTrigger>
           <TabsTrigger value="storage" className="gap-2">
             <HardDrive className="w-4 h-4" />
@@ -809,6 +818,14 @@ const Admin = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="albums">
+          <AlbumManagement />
+        </TabsContent>
+
+        <TabsContent value="promote">
+          <ArtistPromotion />
         </TabsContent>
 
         <TabsContent value="storage">
