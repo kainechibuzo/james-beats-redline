@@ -4,8 +4,9 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Disc, Play, Clock, Music, ArrowLeft, Shuffle } from "lucide-react";
+import { Disc, Play, Music, ArrowLeft, Shuffle } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+import DraggableTrackList from "@/components/album/DraggableTrackList";
 
 const Album = () => {
   const { id } = useParams<{ id: string }>();
@@ -120,15 +121,14 @@ const Album = () => {
       </div>
 
       {/* Songs List */}
-      <div className="space-y-1">
-        <div className="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-2 text-sm text-muted-foreground border-b border-border">
-          <span className="w-8">#</span>
-          <span>Title</span>
-          <Clock className="w-4 h-4" />
-        </div>
-
-        {songsLoading ? (
-          Array.from({ length: 5 }).map((_, i) => (
+      {songsLoading ? (
+        <div className="space-y-1">
+          <div className="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-2 text-sm text-muted-foreground border-b border-border">
+            <span className="w-8">#</span>
+            <span>Title</span>
+            <span>Duration</span>
+          </div>
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3">
               <Skeleton className="w-8 h-4" />
               <div className="space-y-2">
@@ -137,40 +137,16 @@ const Album = () => {
               </div>
               <Skeleton className="w-12 h-4" />
             </div>
-          ))
-        ) : songs && songs.length > 0 ? (
-          songs.map((song, index) => (
-            <div
-              key={song.id}
-              onClick={() => {
-                setQueue(songs);
-                playSong(song);
-              }}
-              className="grid grid-cols-[auto_1fr_auto] gap-4 px-4 py-3 rounded-lg hover:bg-muted/50 cursor-pointer group transition-colors items-center"
-            >
-              <span className="w-8 text-muted-foreground group-hover:hidden">{index + 1}</span>
-              <Play className="w-4 h-4 hidden group-hover:block text-primary" />
-              <div className="flex items-center gap-3 min-w-0">
-                {song.cover_url && (
-                  <img src={song.cover_url} alt="" className="w-10 h-10 rounded object-cover" />
-                )}
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{song.title}</p>
-                  <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
-                </div>
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {song.duration ? formatDuration(song.duration) : "--:--"}
-              </span>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <Music className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No songs in this album yet</p>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : songs && songs.length > 0 ? (
+        <DraggableTrackList songs={songs} albumUserId={album.user_id} />
+      ) : (
+        <div className="text-center py-12 text-muted-foreground">
+          <Music className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>No songs in this album yet</p>
+        </div>
+      )}
     </div>
   );
 };
