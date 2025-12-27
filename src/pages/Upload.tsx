@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { Upload as UploadIcon, Music, X, Image, AlertCircle, Lock } from "lucide-react";
+import { Upload as UploadIcon, Music, X, Image, AlertCircle, Lock, Disc } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useUploadSong } from "@/hooks/useUpload";
+import { useCreateAlbum, useMyAlbums } from "@/hooks/useAlbums";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
@@ -24,12 +27,16 @@ const GENRES = [
 const Upload = () => {
   const { user } = useAuth();
   const { data: profile } = useProfile();
+  const { data: myAlbums } = useMyAlbums();
   const navigate = useNavigate();
   const uploadMutation = useUploadSong();
+  const createAlbum = useCreateAlbum();
   
+  // Song upload state
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [album, setAlbum] = useState("");
+  const [albumId, setAlbumId] = useState("");
   const [genre, setGenre] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -38,8 +45,19 @@ const Upload = () => {
   const [artistError, setArtistError] = useState<string | null>(null);
   const [isCheckingArtist, setIsCheckingArtist] = useState(false);
 
+  // Album creation state
+  const [albumTitle, setAlbumTitle] = useState("");
+  const [albumArtist, setAlbumArtist] = useState("");
+  const [albumDescription, setAlbumDescription] = useState("");
+  const [albumGenre, setAlbumGenre] = useState("");
+  const [albumReleaseYear, setAlbumReleaseYear] = useState("");
+  const [albumIsPublic, setAlbumIsPublic] = useState(true);
+  const [albumCoverFile, setAlbumCoverFile] = useState<File | null>(null);
+  const [albumCoverPreview, setAlbumCoverPreview] = useState<string | null>(null);
+
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const albumCoverInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user has existing songs to lock artist name
   const { data: userExistingSongs } = useQuery({
@@ -65,8 +83,10 @@ const Upload = () => {
   useEffect(() => {
     if (isArtistLocked && lockedArtistName) {
       setArtist(lockedArtistName);
+      setAlbumArtist(lockedArtistName);
     } else if (profile?.display_name && !artist) {
       setArtist(profile.display_name);
+      setAlbumArtist(profile.display_name);
     }
   }, [profile?.display_name, isArtistLocked, lockedArtistName]);
 
@@ -99,7 +119,7 @@ const Upload = () => {
   };
 
   const handleArtistChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isArtistLocked) return; // Prevent changes if artist is locked
+    if (isArtistLocked) return;
     const value = e.target.value;
     setArtist(value);
     setArtistError(null);
@@ -133,7 +153,15 @@ const Upload = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAlbumCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAlbumCoverFile(file);
+      setAlbumCoverPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmitSong = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!audioFile || !title || !artist) return;
@@ -143,7 +171,6 @@ const Upload = () => {
       return;
     }
 
-    // Final check for artist name
     await checkArtistName(artist);
     if (artistError) {
       toast.error("This artist name is already taken by another user");
@@ -153,7 +180,7 @@ const Upload = () => {
     await uploadMutation.mutateAsync({
       title,
       artist: artist.trim(),
-      album: album || undefined,
+      album: albumId ? myAlbums?.find(a => a.id === albumId)?.title : album || undefined,
       genre: genre || undefined,
       audioFile,
       coverFile: coverFile || undefined,
@@ -163,6 +190,7 @@ const Upload = () => {
     setTitle("");
     setArtist(profile?.display_name || "");
     setAlbum("");
+    setAlbumId("");
     setGenre("");
     setAudioFile(null);
     setCoverFile(null);
@@ -171,227 +199,464 @@ const Upload = () => {
     navigate("/library");
   };
 
+  const handleSubmitAlbum = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!albumTitle || !albumArtist) return;
+
+    let coverUrl: string | undefined;
+    
+    if (albumCoverFile) {
+      const fileName = `${user?.id}/${Date.now()}-album-cover.${albumCoverFile.name.split('.').pop()}`;
+      const { error: uploadError } = await supabase.storage
+        .from("covers")
+        .upload(fileName, albumCoverFile);
+
+      if (uploadError) {
+        toast.error("Failed to upload cover");
+        return;
+      }
+
+      const { data } = supabase.storage.from("covers").getPublicUrl(fileName);
+      coverUrl = data.publicUrl;
+    }
+
+    await createAlbum.mutateAsync({
+      title: albumTitle,
+      artist: albumArtist.trim(),
+      description: albumDescription || undefined,
+      genre: albumGenre || undefined,
+      release_year: albumReleaseYear ? parseInt(albumReleaseYear) : undefined,
+      cover_url: coverUrl,
+      is_public: albumIsPublic,
+      is_featured: false,
+    });
+
+    setAlbumTitle("");
+    setAlbumDescription("");
+    setAlbumGenre("");
+    setAlbumReleaseYear("");
+    setAlbumCoverFile(null);
+    setAlbumCoverPreview(null);
+  };
 
   return (
     <div className="pb-32 max-w-3xl mx-auto animate-fade-in">
       <h1 className="text-4xl font-bold mb-2">Upload Your Music</h1>
       <p className="text-muted-foreground mb-8">
-        Share your tracks with the world.
+        Share your tracks and albums with the world.
       </p>
 
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Track Details</CardTitle>
-            <CardDescription>
-              Fill in the information about your track
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Audio Upload */}
-            <div
-              onClick={() => audioInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                audioFile 
-                  ? "border-primary bg-primary/5" 
-                  : "border-border hover:border-primary/50"
-              }`}
-            >
-              <input
-                ref={audioInputRef}
-                type="file"
-                accept="audio/*"
-                onChange={handleAudioSelect}
-                className="hidden"
-              />
-              {audioFile ? (
-                <div className="flex items-center justify-center gap-3">
-                  <Music className="w-8 h-8 text-primary" />
-                  <div className="text-left">
-                    <p className="font-medium">{audioFile.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAudioFile(null);
-                    }}
+      <Tabs defaultValue="song" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="song" className="gap-2">
+            <Music className="w-4 h-4" />
+            Upload Song
+          </TabsTrigger>
+          <TabsTrigger value="album" className="gap-2">
+            <Disc className="w-4 h-4" />
+            Create Album
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="song">
+          <form onSubmit={handleSubmitSong}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Track Details</CardTitle>
+                <CardDescription>
+                  Fill in the information about your track
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Audio Upload */}
+                <div
+                  onClick={() => audioInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                    audioFile 
+                      ? "border-primary bg-primary/5" 
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <input
+                    ref={audioInputRef}
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleAudioSelect}
+                    className="hidden"
+                  />
+                  {audioFile ? (
+                    <div className="flex items-center justify-center gap-3">
+                      <Music className="w-8 h-8 text-primary" />
+                      <div className="text-left">
+                        <p className="font-medium">{audioFile.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAudioFile(null);
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-lg font-medium mb-2">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        MP3, WAV, or FLAC (max. 100MB)
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Cover Art */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div
+                    onClick={() => coverInputRef.current?.click()}
+                    className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      coverPreview 
+                        ? "border-primary" 
+                        : "border-border hover:border-primary/50"
+                    }`}
                   >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <UploadIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-lg font-medium mb-2">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    MP3, WAV, or FLAC (max. 100MB)
-                  </p>
-                </>
-              )}
-            </div>
-
-            {/* Cover Art */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div
-                onClick={() => coverInputRef.current?.click()}
-                className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                  coverPreview 
-                    ? "border-primary" 
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <input
-                  ref={coverInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverSelect}
-                  className="hidden"
-                />
-                {coverPreview ? (
-                  <img
-                    src={coverPreview}
-                    alt="Cover preview"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <>
-                    <Image className="w-8 h-8 text-muted-foreground mb-2" />
-                    <p className="text-xs text-muted-foreground">Add Cover</p>
-                  </>
-                )}
-              </div>
-
-              <div className="md:col-span-2 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Track Title *</Label>
-                  <Input
-                    id="title"
-                    placeholder="Enter track title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="artist" className="flex items-center gap-2">
-                    Artist Name *
-                    {isArtistLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="artist"
-                      placeholder="Enter artist name"
-                      value={artist}
-                      onChange={handleArtistChange}
-                      onBlur={handleArtistBlur}
-                      className={`${artistError ? "border-destructive" : ""} ${isArtistLocked ? "bg-muted cursor-not-allowed pr-10" : ""}`}
-                      disabled={isArtistLocked}
-                      required
+                    <input
+                      ref={coverInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCoverSelect}
+                      className="hidden"
                     />
-                    {isArtistLocked && (
-                      <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    {coverPreview ? (
+                      <img
+                        src={coverPreview}
+                        alt="Cover preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <>
+                        <Image className="w-8 h-8 text-muted-foreground mb-2" />
+                        <p className="text-xs text-muted-foreground">Add Cover</p>
+                      </>
                     )}
                   </div>
-                  {isCheckingArtist && (
-                    <p className="text-sm text-muted-foreground">Checking availability...</p>
-                  )}
-                  {artistError && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      {artistError}
-                    </p>
-                  )}
-                  {isArtistLocked ? (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Artist name locked. Sign out and back in to change it.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Your artist name will be locked once you upload a song
-                    </p>
-                  )}
+
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Track Title *</Label>
+                      <Input
+                        id="title"
+                        placeholder="Enter track title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="artist" className="flex items-center gap-2">
+                        Artist Name *
+                        {isArtistLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="artist"
+                          placeholder="Enter artist name"
+                          value={artist}
+                          onChange={handleArtistChange}
+                          onBlur={handleArtistBlur}
+                          className={`${artistError ? "border-destructive" : ""} ${isArtistLocked ? "bg-muted cursor-not-allowed pr-10" : ""}`}
+                          disabled={isArtistLocked}
+                          required
+                        />
+                        {isArtistLocked && (
+                          <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      {isCheckingArtist && (
+                        <p className="text-sm text-muted-foreground">Checking availability...</p>
+                      )}
+                      {artistError && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {artistError}
+                        </p>
+                      )}
+                      {isArtistLocked ? (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          Artist name locked. Sign out and back in to change it.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Your artist name will be locked once you upload a song
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="album">Album</Label>
-                <Input
-                  id="album"
-                  placeholder="Enter album name (optional)"
-                  value={album}
-                  onChange={(e) => setAlbum(e.target.value)}
-                />
-              </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="album">Album</Label>
+                    {myAlbums && myAlbums.length > 0 ? (
+                      <Select value={albumId} onValueChange={setAlbumId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select album (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {myAlbums.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="album"
+                        placeholder="Enter album name (optional)"
+                        value={album}
+                        onChange={(e) => setAlbum(e.target.value)}
+                      />
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="genre">Genre</Label>
-                <Select value={genre} onValueChange={setGenre}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select genre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GENRES.map((g) => (
-                      <SelectItem key={g} value={g.toLowerCase()}>
-                        {g}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div>
-                <Label htmlFor="public" className="text-base font-medium">
-                  Make track public
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Public tracks can be discovered by everyone
-                </p>
-              </div>
-              <Switch
-                id="public"
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
-              />
-            </div>
-
-            {uploadMutation.isPending && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Uploading...</span>
-                  <span>Processing</span>
+                  <div className="space-y-2">
+                    <Label htmlFor="genre">Genre</Label>
+                    <Select value={genre} onValueChange={setGenre}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select genre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GENRES.map((g) => (
+                          <SelectItem key={g} value={g.toLowerCase()}>
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <Progress value={50} className="h-2" />
-              </div>
-            )}
 
-            <div className="flex gap-4">
-              <Button
-                type="submit"
-                variant="glow"
-                className="flex-1 gap-2"
-                disabled={!audioFile || !title || !artist || !!artistError || uploadMutation.isPending}
-              >
-                <Music className="w-4 h-4" />
-                {uploadMutation.isPending ? "Uploading..." : "Upload Track"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label htmlFor="public" className="text-base font-medium">
+                      Make track public
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Public tracks can be discovered by everyone
+                    </p>
+                  </div>
+                  <Switch
+                    id="public"
+                    checked={isPublic}
+                    onCheckedChange={setIsPublic}
+                  />
+                </div>
+
+                {uploadMutation.isPending && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Uploading...</span>
+                      <span>Processing</span>
+                    </div>
+                    <Progress value={50} className="h-2" />
+                  </div>
+                )}
+
+                <div className="flex gap-4">
+                  <Button
+                    type="submit"
+                    variant="glow"
+                    className="flex-1 gap-2"
+                    disabled={!audioFile || !title || !artist || !!artistError || uploadMutation.isPending}
+                  >
+                    <Music className="w-4 h-4" />
+                    {uploadMutation.isPending ? "Uploading..." : "Upload Track"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </form>
+        </TabsContent>
+
+        <TabsContent value="album">
+          <form onSubmit={handleSubmitAlbum}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Album Details</CardTitle>
+                <CardDescription>
+                  Create a new album to organize your tracks
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Album Cover */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div
+                    onClick={() => albumCoverInputRef.current?.click()}
+                    className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      albumCoverPreview 
+                        ? "border-primary" 
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <input
+                      ref={albumCoverInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAlbumCoverSelect}
+                      className="hidden"
+                    />
+                    {albumCoverPreview ? (
+                      <img
+                        src={albumCoverPreview}
+                        alt="Album cover preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <>
+                        <Disc className="w-8 h-8 text-muted-foreground mb-2" />
+                        <p className="text-xs text-muted-foreground">Add Cover</p>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="albumTitle">Album Title *</Label>
+                      <Input
+                        id="albumTitle"
+                        placeholder="Enter album title"
+                        value={albumTitle}
+                        onChange={(e) => setAlbumTitle(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="albumArtist" className="flex items-center gap-2">
+                        Artist Name *
+                        {isArtistLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                      </Label>
+                      <Input
+                        id="albumArtist"
+                        placeholder="Enter artist name"
+                        value={albumArtist}
+                        onChange={(e) => !isArtistLocked && setAlbumArtist(e.target.value)}
+                        disabled={isArtistLocked}
+                        className={isArtistLocked ? "bg-muted cursor-not-allowed" : ""}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="albumDescription">Description</Label>
+                  <Textarea
+                    id="albumDescription"
+                    placeholder="Enter album description (optional)"
+                    value={albumDescription}
+                    onChange={(e) => setAlbumDescription(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="albumGenre">Genre</Label>
+                    <Select value={albumGenre} onValueChange={setAlbumGenre}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select genre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GENRES.map((g) => (
+                          <SelectItem key={g} value={g.toLowerCase()}>
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="releaseYear">Release Year</Label>
+                    <Input
+                      id="releaseYear"
+                      type="number"
+                      placeholder="2024"
+                      value={albumReleaseYear}
+                      onChange={(e) => setAlbumReleaseYear(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label htmlFor="albumPublic" className="text-base font-medium">
+                      Make album public
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Public albums can be discovered by everyone
+                    </p>
+                  </div>
+                  <Switch
+                    id="albumPublic"
+                    checked={albumIsPublic}
+                    onCheckedChange={setAlbumIsPublic}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="glow"
+                  className="w-full gap-2"
+                  disabled={!albumTitle || !albumArtist || createAlbum.isPending}
+                >
+                  <Disc className="w-4 h-4" />
+                  {createAlbum.isPending ? "Creating..." : "Create Album"}
+                </Button>
+              </CardContent>
+            </Card>
+          </form>
+
+          {/* My Albums */}
+          {myAlbums && myAlbums.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Your Albums</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  {myAlbums.map((album) => (
+                    <div key={album.id} className="text-center">
+                      <div className="aspect-square rounded-lg bg-muted overflow-hidden mb-2">
+                        {album.cover_url ? (
+                          <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                            <Disc className="w-8 h-8 text-primary/50" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium truncate">{album.title}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
