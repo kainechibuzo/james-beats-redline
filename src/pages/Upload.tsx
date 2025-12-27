@@ -175,7 +175,7 @@ const Upload = () => {
     await uploadMutation.mutateAsync({
       title,
       artist: artist.trim(),
-      album: albumId ? myAlbums?.find(a => a.id === albumId)?.title : album || undefined,
+      album: albumId && albumId !== "none" ? myAlbums?.find(a => a.id === albumId)?.title : album || undefined,
       genre: genre || undefined,
       audioFile,
       coverFile: coverFile || undefined,
@@ -693,7 +693,7 @@ const Upload = () => {
                         <SelectValue placeholder="Select album (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No album</SelectItem>
+                        <SelectItem value="none">No album</SelectItem>
                         {myAlbums?.map((a) => (
                           <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
                         ))}
