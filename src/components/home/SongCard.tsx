@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Play, Heart, MoreVertical, Trash2, ListPlus, ListMusic, User, Pencil } from "lucide-react";
+import { Play, Heart, MoreVertical, Trash2, ListPlus, ListMusic, User, Pencil, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Song, useToggleLike, useIsLiked } from "@/hooks/useSongs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useDeleteSong } from "@/hooks/useDeleteSong";
 import AddToPlaylistDialog from "@/components/playlist/AddToPlaylistDialog";
 import EditSongDialog from "@/components/songs/EditSongDialog";
+import LyricsEditor from "@/components/lyrics/LyricsEditor";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [playlistDialogOpen, setPlaylistDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [lyricsDialogOpen, setLyricsDialogOpen] = React.useState(false);
 
   // Determine size based on compact prop and mobile
   const isSmall = compact || isMobile;
@@ -132,10 +134,16 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
                   </Link>
                 </DropdownMenuItem>
                 {isOwner && (
-                  <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Edit song
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Edit song
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLyricsDialogOpen(true)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Edit lyrics
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {(isOwner || showDelete) && (
                   <DropdownMenuItem 
@@ -203,6 +211,14 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
         song={song}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+      />
+
+      {/* Lyrics editor dialog */}
+      <LyricsEditor
+        open={lyricsDialogOpen}
+        onOpenChange={setLyricsDialogOpen}
+        songId={song.id}
+        songTitle={song.title}
       />
     </>
   );
