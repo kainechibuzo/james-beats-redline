@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import BulkAlbumImport from "@/components/upload/BulkAlbumImport";
 
 const GENRES = [
   "Pop", "Rock", "Hip-Hop", "R&B", "Electronic", "Jazz", 
@@ -331,14 +332,18 @@ const Upload = () => {
       </p>
 
       <Tabs defaultValue="album" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="album" className="gap-2">
             <FolderOpen className="w-4 h-4" />
-            Upload Album (Folder)
+            Album (Folder)
           </TabsTrigger>
           <TabsTrigger value="song" className="gap-2">
             <Music className="w-4 h-4" />
             Single Track
+          </TabsTrigger>
+          <TabsTrigger value="bulk" className="gap-2">
+            <Disc className="w-4 h-4" />
+            Bulk Import
           </TabsTrigger>
         </TabsList>
 
@@ -727,6 +732,11 @@ const Upload = () => {
               </CardContent>
             </Card>
           </form>
+        </TabsContent>
+
+        {/* Bulk CSV Import */}
+        <TabsContent value="bulk">
+          <BulkAlbumImport />
         </TabsContent>
       </Tabs>
     </div>
