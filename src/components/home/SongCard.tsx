@@ -11,6 +11,7 @@ import { useDeleteSong } from "@/hooks/useDeleteSong";
 import AddToPlaylistDialog from "@/components/playlist/AddToPlaylistDialog";
 import EditSongDialog from "@/components/songs/EditSongDialog";
 import LyricsEditor from "@/components/lyrics/LyricsEditor";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +67,7 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
   const handleAddToQueue = (e: React.MouseEvent) => {
     e.stopPropagation();
     addToQueue(song);
+    toast.success(`Added "${song.title}" to queue`);
   };
 
   const handleDelete = () => {
@@ -194,19 +196,9 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
       {/* Add to playlist dialog */}
       <AddToPlaylistDialog 
         songId={song.id} 
-        trigger={<span style={{ display: 'none' }} />}
+        open={playlistDialogOpen}
+        onOpenChange={setPlaylistDialogOpen}
       />
-      {playlistDialogOpen && (
-        <AddToPlaylistDialog 
-          songId={song.id} 
-          trigger={
-            <button 
-              ref={(el) => el?.click()} 
-              style={{ display: 'none' }}
-            />
-          }
-        />
-      )}
 
       {/* Edit song dialog */}
       <EditSongDialog
