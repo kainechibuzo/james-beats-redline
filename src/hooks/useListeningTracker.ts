@@ -82,6 +82,34 @@ export const useListeningTracker = (
         played_at: new Date().toISOString(),
       });
 
+      // Increment play_count on the song
+      const { data: song } = await supabase
+        .from("songs")
+        .select("play_count, user_id")
+        .eq("id", songId)
+        .single();
+
+      if (song) {
+        await supabase
+          .from("songs")
+          .update({ play_count: (song.play_count || 0) + 1 })
+          .eq("id", songId);
+
+        // Increment total_plays on the song owner's profile
+        const { data: ownerProfile } = await supabase
+          .from("profiles")
+          .select("total_plays")
+          .eq("user_id", song.user_id)
+          .single();
+
+        if (ownerProfile) {
+          await supabase
+            .from("profiles")
+            .update({ total_plays: (ownerProfile.total_plays || 0) + 1 })
+            .eq("user_id", song.user_id);
+        }
+      }
+
       console.log("Listen recorded for song:", songId);
     } catch (error) {
       console.error("Error recording listen:", error);

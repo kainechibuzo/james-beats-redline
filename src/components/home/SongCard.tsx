@@ -83,6 +83,8 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
           <img
             src={song.cover_url || "/placeholder.svg"}
             alt={song.title}
+            loading="lazy"
+            decoding="async"
             className={`w-full aspect-square object-cover rounded-md bg-muted ${isSmall ? 'max-w-[120px]' : 'max-w-[180px] md:max-w-none'}`}
           />
           <div className={`absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0`}>

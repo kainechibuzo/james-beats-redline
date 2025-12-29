@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,13 +6,39 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Trash2, Clock, Music, Loader2, Play, Pause, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Clock, Music, Loader2, Play, Pause, RotateCcw, Upload } from "lucide-react";
 import { useLyrics, LyricLine, getCurrentLyricLine } from "@/hooks/useLyrics";
 import { useCreateLyrics, useUpdateLyrics, useDeleteLyrics } from "@/hooks/useLyricsEditor";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Slider } from "@/components/ui/slider";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+// Parse LRC file format
+const parseLRC = (lrcContent: string): LyricLine[] => {
+  const lines: LyricLine[] = [];
+  const lrcLines = lrcContent.split('\n');
+  
+  for (const line of lrcLines) {
+    // Match [mm:ss.xx] or [mm:ss:xx] format
+    const match = line.match(/^\[(\d{1,2}):(\d{2})([.:])(\d{2})\](.*)$/);
+    if (match) {
+      const mins = parseInt(match[1], 10);
+      const secs = parseInt(match[2], 10);
+      const ms = parseInt(match[4], 10);
+      const text = match[5].trim();
+      
+      // Convert to seconds (ms is in centiseconds for LRC)
+      const time = mins * 60 + secs + ms / 100;
+      
+      if (text) {
+        lines.push({ time, text });
+      }
+    }
+  }
+  
+  return lines.sort((a, b) => a.time - b.time);
+};
 
 interface LyricsEditorProps {
   open: boolean;
@@ -87,6 +113,32 @@ const LyricsEditor = ({ open, onOpenChange, songId, songTitle, songFileUrl }: Ly
       setLanguage("en");
     }
   }, [existingLyrics, open]);
+
+  const handleLRCImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const parsedLines = parseLRC(content);
+      
+      if (parsedLines.length > 0) {
+        setLines(parsedLines);
+        setSynced(true);
+        toast.success(`Imported ${parsedLines.length} lyric lines from LRC file`);
+      } else {
+        toast.error("No valid lyrics found in LRC file");
+      }
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read LRC file");
+    };
+    reader.readAsText(file);
+    
+    // Reset input so same file can be imported again
+    e.target.value = '';
+  }, []);
 
   const togglePreview = useCallback(() => {
     if (!audioRef.current) return;
@@ -270,13 +322,29 @@ const LyricsEditor = ({ open, onOpenChange, songId, songTitle, songFileUrl }: Ly
               </div>
             )}
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Switch checked={synced} onCheckedChange={setSynced} id="synced" />
-                <Label htmlFor="synced" className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  Synced Lyrics
-                </Label>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch checked={synced} onCheckedChange={setSynced} id="synced" />
+                  <Label htmlFor="synced" className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    Synced Lyrics
+                  </Label>
+                </div>
+                <label className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import LRC
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    accept=".lrc,.txt"
+                    className="hidden"
+                    onChange={handleLRCImport}
+                  />
+                </label>
               </div>
               <div className="flex items-center gap-2">
                 <Label htmlFor="language">Language:</Label>
