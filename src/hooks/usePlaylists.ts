@@ -36,6 +36,8 @@ export const usePlaylists = () => {
       return data as Playlist[];
     },
     enabled: !!user,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
   });
 };
 

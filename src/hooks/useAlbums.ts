@@ -26,11 +26,14 @@ export const useAlbums = () => {
         .from("albums")
         .select("*")
         .eq("is_public", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(50);
 
       if (error) throw error;
       return data as Album[];
     },
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
   });
 };
 
@@ -49,6 +52,8 @@ export const useFeaturedAlbums = () => {
       if (error) throw error;
       return data as Album[];
     },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
   });
 };
 
