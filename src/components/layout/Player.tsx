@@ -5,6 +5,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useIsLiked, useToggleLike } from "@/hooks/useSongs";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Link } from "react-router-dom";
 import QueuePanel from "@/components/queue/QueuePanel";
 
 const formatTime = (seconds: number) => {
@@ -70,7 +71,10 @@ const Player = () => {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {currentSong ? (
               <>
-                <div className="w-10 h-10 bg-muted rounded overflow-hidden flex-shrink-0">
+                <Link 
+                  to={`/artist/${encodeURIComponent(currentSong.artist)}`}
+                  className="w-10 h-10 bg-muted rounded overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-primary transition-all"
+                >
                   {currentSong.cover_url ? (
                     <img src={currentSong.cover_url} alt={currentSong.title} className="w-full h-full object-cover" />
                   ) : (
@@ -78,10 +82,15 @@ const Player = () => {
                       <span className="text-xs text-primary">♪</span>
                     </div>
                   )}
-                </div>
+                </Link>
                 <div className="flex flex-col min-w-0">
                   <span className="text-xs font-medium truncate">{currentSong.title}</span>
-                  <span className="text-[10px] text-muted-foreground truncate">{currentSong.artist}</span>
+                  <Link 
+                    to={`/artist/${encodeURIComponent(currentSong.artist)}`}
+                    className="text-[10px] text-muted-foreground truncate hover:text-primary hover:underline"
+                  >
+                    {currentSong.artist}
+                  </Link>
                 </div>
               </>
             ) : (
@@ -116,7 +125,10 @@ const Player = () => {
       <div className="flex items-center gap-4 w-1/4 min-w-0">
         {currentSong ? (
           <>
-            <div className="w-14 h-14 bg-muted rounded-md overflow-hidden flex-shrink-0">
+            <Link 
+              to={`/artist/${encodeURIComponent(currentSong.artist)}`}
+              className="w-14 h-14 bg-muted rounded-md overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-primary transition-all"
+            >
               {currentSong.cover_url ? (
                 <img
                   src={currentSong.cover_url}
@@ -128,10 +140,15 @@ const Player = () => {
                   <span className="text-xs text-primary">♪</span>
                 </div>
               )}
-            </div>
+            </Link>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-medium truncate">{currentSong.title}</span>
-              <span className="text-xs text-muted-foreground truncate">{currentSong.artist}</span>
+              <Link 
+                to={`/artist/${encodeURIComponent(currentSong.artist)}`}
+                className="text-xs text-muted-foreground truncate hover:text-primary hover:underline"
+              >
+                {currentSong.artist}
+              </Link>
             </div>
             <Button
               variant="ghost"
