@@ -1,4 +1,4 @@
-import { Home, Search, Library, Upload, Heart, Clock, User, LogIn, LogOut, Menu, X, Disc3, Calendar } from "lucide-react";
+import { Home, Search, Library, Upload, Heart, Clock, User, LogIn, LogOut, Menu, X, Disc3, Calendar, Disc } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +40,10 @@ const Sidebar = () => {
     icon: Heart,
     label: "Liked Songs",
     path: "/liked"
+  }, {
+    icon: Disc,
+    label: "Liked Albums",
+    path: "/liked-albums"
   }, {
     icon: Clock,
     label: "Recently Played",

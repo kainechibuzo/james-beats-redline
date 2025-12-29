@@ -1,21 +1,42 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAlbums, useFeaturedAlbums } from "@/hooks/useAlbums";
+import { useAlbums, useFeaturedAlbums, useDeleteAlbum } from "@/hooks/useAlbums";
 import { useSongs } from "@/hooks/useSongs";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Disc, Star, Music, ChevronDown, ChevronRight, Play, Pause, FolderOpen } from "lucide-react";
+import { Disc, Star, Music, ChevronDown, ChevronRight, Play, Pause, FolderOpen, MoreVertical, Trash2, Heart, ListMusic, User } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useIsAlbumLiked, useToggleAlbumLike } from "@/hooks/useAlbumLikes";
 
 const Albums = () => {
   const { data: albums, isLoading } = useAlbums();
   const { data: featuredAlbums } = useFeaturedAlbums();
   const { data: allSongs } = useSongs();
-  const { playSong, currentSong, isPlaying, togglePlay } = usePlayer();
+  const { playSong, currentSong, isPlaying, togglePlay, addToQueue } = usePlayer();
+  const { user } = useAuth();
+  const deleteAlbum = useDeleteAlbum();
   const [openAlbums, setOpenAlbums] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<string | null>(null);
 
   const toggleAlbum = (albumId: string) => {
     setOpenAlbums(prev => {
@@ -42,91 +63,156 @@ const Albums = () => {
     }
   };
 
+  const handleAddAlbumToQueue = (albumTitle: string, artistName: string) => {
+    const songs = getAlbumSongs(albumTitle, artistName);
+    songs.forEach(song => addToQueue(song));
+  };
+
+  const handleDeleteAlbum = (albumId: string) => {
+    deleteAlbum.mutate(albumId);
+    setDeleteDialogOpen(null);
+  };
+
   const AlbumCard = ({ album, isFeatured = false }: { album: any; isFeatured?: boolean; key?: string }) => {
     const isOpen = openAlbums.has(album.id);
     const songs = getAlbumSongs(album.title, album.artist);
     const isCurrentAlbum = currentSong?.album === album.title && currentSong?.artist === album.artist;
+    const isOwner = user?.id === album.user_id;
+    const isAlbumLiked = useIsAlbumLiked(album.id);
+    const { toggle: toggleAlbumLike, isPending: isLikePending } = useToggleAlbumLike();
 
     return (
-      <Collapsible open={isOpen} onOpenChange={() => toggleAlbum(album.id)}>
-        <div className={`rounded-xl border transition-all duration-300 ${
-          isOpen ? "bg-card border-primary/30" : "bg-card/50 border-border hover:border-primary/20"
-        }`}>
-          <CollapsibleTrigger className="w-full">
-            <div className="flex items-center gap-4 p-4 cursor-pointer group">
-              {/* Album Cover */}
-              <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                {album.cover_url ? (
-                  <img
-                    src={album.cover_url}
-                    alt={album.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                    <FolderOpen className="w-8 h-8 text-primary/50" />
-                  </div>
-                )}
-                {isFeatured && (
-                  <Badge className="absolute top-1 right-1 bg-yellow-500/90 text-black text-[10px] px-1 py-0">
-                    <Star className="w-2 h-2 mr-0.5" />
-                    Featured
-                  </Badge>
-                )}
-              </div>
-
-              {/* Album Info */}
-              <div className="flex-1 text-left min-w-0">
-                <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
-                  {album.title}
-                </h3>
-                <p className="text-sm text-muted-foreground truncate">{album.artist}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {album.genre && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {album.genre}
+        <Collapsible open={isOpen} onOpenChange={() => toggleAlbum(album.id)}>
+          <div className={`rounded-xl border transition-all duration-300 ${
+            isOpen ? "bg-card border-primary/30" : "bg-card/50 border-border hover:border-primary/20"
+          }`}>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center gap-4 p-4 cursor-pointer group">
+                {/* Album Cover */}
+                <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+                  {album.cover_url ? (
+                    <img
+                      src={album.cover_url}
+                      alt={album.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                      <FolderOpen className="w-8 h-8 text-primary/50" />
+                    </div>
+                  )}
+                  {isFeatured && (
+                    <Badge className="absolute top-1 right-1 bg-yellow-500/90 text-black text-[10px] px-1 py-0">
+                      <Star className="w-2 h-2 mr-0.5" />
+                      Featured
                     </Badge>
                   )}
-                  <span className="text-xs text-muted-foreground">
-                    {songs.length} tracks
-                  </span>
-                  {album.release_year && (
+                </div>
+
+                {/* Album Info */}
+                <div className="flex-1 text-left min-w-0">
+                  <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
+                    {album.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground truncate">{album.artist}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {album.genre && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {album.genre}
+                      </Badge>
+                    )}
                     <span className="text-xs text-muted-foreground">
-                      · {album.release_year}
+                      {songs.length} tracks
                     </span>
+                    {album.release_year && (
+                      <span className="text-xs text-muted-foreground">
+                        · {album.release_year}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  {user && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleAlbumLike(album.id);
+                      }}
+                      disabled={isLikePending}
+                    >
+                      <Heart className={`w-4 h-4 ${isAlbumLiked ? "fill-primary text-primary" : ""}`} />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isCurrentAlbum && isPlaying) {
+                        togglePlay();
+                      } else {
+                        handlePlayAlbum(album.title, album.artist);
+                      }
+                    }}
+                  >
+                    {isCurrentAlbum && isPlaying ? (
+                      <Pause className="w-5 h-5 text-primary" />
+                    ) : (
+                      <Play className="w-5 h-5 text-primary ml-0.5" />
+                    )}
+                  </Button>
+                  
+                  {/* More options dropdown */}
+                  {user && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => handleAddAlbumToQueue(album.title, album.artist)}>
+                          <ListMusic className="w-4 h-4 mr-2" />
+                          Add all to queue
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/artist/${encodeURIComponent(album.artist)}`}>
+                            <User className="w-4 h-4 mr-2" />
+                            View artist
+                          </Link>
+                        </DropdownMenuItem>
+                        {isOwner && (
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeleteDialogOpen(album.id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete album
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  
+                  {isOpen ? (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
                   )}
                 </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isCurrentAlbum && isPlaying) {
-                      togglePlay();
-                    } else {
-                      handlePlayAlbum(album.title, album.artist);
-                    }
-                  }}
-                >
-                  {isCurrentAlbum && isPlaying ? (
-                    <Pause className="w-5 h-5 text-primary" />
-                  ) : (
-                    <Play className="w-5 h-5 text-primary ml-0.5" />
-                  )}
-                </Button>
-                {isOpen ? (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                )}
-              </div>
-            </div>
-          </CollapsibleTrigger>
+            </CollapsibleTrigger>
 
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-0">
@@ -235,6 +321,24 @@ const Albums = () => {
           </div>
         )}
       </section>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteDialogOpen} onOpenChange={() => setDeleteDialogOpen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete album?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this album. Songs in the album will remain but won't be associated with this album anymore.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteDialogOpen && handleDeleteAlbum(deleteDialogOpen)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -219,6 +219,7 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
         onOpenChange={setLyricsDialogOpen}
         songId={song.id}
         songTitle={song.title}
+        songFileUrl={song.file_url}
       />
     </>
   );

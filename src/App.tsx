@@ -15,6 +15,7 @@ import Library from "./pages/Library";
 import Upload from "./pages/Upload";
 import Profile from "./pages/Profile";
 import LikedSongs from "./pages/LikedSongs";
+import LikedAlbums from "./pages/LikedAlbums";
 import RecentlyPlayed from "./pages/RecentlyPlayed";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -70,6 +71,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <LikedSongs />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/liked-albums"
+                  element={
+                    <ProtectedRoute>
+                      <LikedAlbums />
                     </ProtectedRoute>
                   }
                 />
