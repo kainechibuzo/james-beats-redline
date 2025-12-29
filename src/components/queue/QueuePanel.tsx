@@ -70,7 +70,12 @@ const SortableQueueItem: React.FC<{
 };
 
 const QueuePanel = ({ trigger }: QueuePanelProps) => {
-  const { queue, currentSong, play, clearQueue, setQueue } = usePlayer();
+  const { queue, currentSong, play, clearQueue, removeFromQueue } = usePlayer();
+  const [localQueue, setLocalQueue] = React.useState(queue);
+
+  React.useEffect(() => {
+    setLocalQueue(queue);
+  }, [queue]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -87,17 +92,17 @@ const QueuePanel = ({ trigger }: QueuePanelProps) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = queue.findIndex((s: Song, i: number) => `${s.id}-${i}` === active.id);
-      const newIndex = queue.findIndex((s: Song, i: number) => `${s.id}-${i}` === over.id);
+      const oldIndex = localQueue.findIndex((s: Song, i: number) => `${s.id}-${i}` === active.id);
+      const newIndex = localQueue.findIndex((s: Song, i: number) => `${s.id}-${i}` === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newQueue = arrayMove(queue, oldIndex, newIndex);
-        setQueue(newQueue);
+        const newQueue = arrayMove(localQueue, oldIndex, newIndex);
+        setLocalQueue(newQueue);
       }
     }
   };
 
-  const sortableItems = queue.map((song: Song, index: number) => `${song.id}-${index}`);
+  const sortableItems = localQueue.map((song: Song, index: number) => `${song.id}-${index}`);
 
   return (
     <Sheet>
@@ -144,9 +149,9 @@ const QueuePanel = ({ trigger }: QueuePanelProps) => {
 
         <div>
           <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">
-            Up Next ({queue.length}) - Drag to reorder
+            Up Next ({localQueue.length}) - Drag to reorder
           </p>
-          {queue.length > 0 ? (
+          {localQueue.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-280px)]">
               <DndContext
                 sensors={sensors}
@@ -155,7 +160,7 @@ const QueuePanel = ({ trigger }: QueuePanelProps) => {
               >
                 <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
                   <div className="space-y-1">
-                    {queue.map((song: Song, index: number) => {
+                    {localQueue.map((song: Song, index: number) => {
                       const itemKey = `${song.id}-${index}`;
                       return (
                         <SortableQueueItem
