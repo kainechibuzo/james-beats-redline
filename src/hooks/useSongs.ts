@@ -25,11 +25,14 @@ export const useSongs = () => {
         .from("songs")
         .select("*")
         .eq("is_public", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100); // Limit initial load for performance
 
       if (error) throw error;
       return data as Song[];
     },
+    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
+    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
   });
 };
 
@@ -71,6 +74,8 @@ export const useRecentlyPlayed = () => {
       })) as (Song & { played_at: string })[];
     },
     enabled: !!user,
+    staleTime: 1000 * 30, // Cache for 30 seconds
+    gcTime: 1000 * 60 * 5, // Keep for 5 minutes
   });
 };
 

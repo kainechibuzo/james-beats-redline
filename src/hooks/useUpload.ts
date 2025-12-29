@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageUtils";
 
 interface UploadSongData {
   title: string;
@@ -23,17 +24,27 @@ export const useUploadSong = () => {
     mutationFn: async (data: UploadSongData) => {
       if (!user) throw new Error("Must be logged in to upload");
 
+      setUploadProgress(5);
+
+      // Compress cover image in parallel with preparing audio
+      const [compressedCover] = await Promise.all([
+        data.coverFile ? compressImage(data.coverFile, 800, 0.85) : null,
+      ]);
+
       setUploadProgress(10);
 
       // Upload audio file
       const audioFileName = `${user.id}/${Date.now()}-${data.audioFile.name}`;
       const { error: audioError } = await supabase.storage
         .from("songs")
-        .upload(audioFileName, data.audioFile);
+        .upload(audioFileName, data.audioFile, {
+          cacheControl: '3600',
+          upsert: false,
+        });
 
       if (audioError) throw audioError;
 
-      setUploadProgress(50);
+      setUploadProgress(60);
 
       const { data: audioUrl } = supabase.storage
         .from("songs")
@@ -41,12 +52,15 @@ export const useUploadSong = () => {
 
       let coverUrl: string | null = null;
 
-      // Upload cover if provided
-      if (data.coverFile) {
-        const coverFileName = `${user.id}/${Date.now()}-${data.coverFile.name}`;
+      // Upload compressed cover if provided
+      if (compressedCover) {
+        const coverFileName = `${user.id}/${Date.now()}-cover.jpg`;
         const { error: coverError } = await supabase.storage
           .from("covers")
-          .upload(coverFileName, data.coverFile);
+          .upload(coverFileName, compressedCover, {
+            cacheControl: '3600',
+            upsert: false,
+          });
 
         if (coverError) throw coverError;
 
