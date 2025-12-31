@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Sidebar from "./Sidebar";
 import Player from "./Player";
+import MiniPlayer from "@/components/features/MiniPlayer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,6 +70,7 @@ const MainLayout = () => {
           <Outlet />
         </div>
       </main>
+      <MiniPlayer />
       <Player />
     </div>
   );
