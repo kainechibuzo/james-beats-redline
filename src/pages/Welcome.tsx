@@ -3,13 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Music, Headphones, Radio, Sparkles, Download, Upload, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import welcomeHero from "@/assets/welcome-hero.jpg";
-import heroMusic from "@/assets/hero-music.jpg";
-import heroMusic2 from "@/assets/hero-music-2.jpg";
-import heroMusic3 from "@/assets/hero-music-3.jpg";
-import heroMusic4 from "@/assets/hero-music-4.jpg";
+import welcomeNature1 from "@/assets/welcome-nature-1.jpg";
+import welcomeNature2 from "@/assets/welcome-nature-2.jpg";
+import welcomeNature3 from "@/assets/welcome-nature-3.jpg";
+import heroNature from "@/assets/hero-nature.jpg";
 
-const heroImages = [welcomeHero, heroMusic, heroMusic2, heroMusic3, heroMusic4];
+const heroImages = [welcomeNature1, welcomeNature2, welcomeNature3, heroNature];
 
 const otherProducts = [
   { name: "Air AI Monitor", description: "Smart air quality tracking" },
