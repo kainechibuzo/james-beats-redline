@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, 
   Shuffle, Repeat, Repeat1, Heart, Share2, ListMusic, Mic2, 
-  X, Disc3, Layers, Settings2
+  X, Disc3, Layers, Settings2, ChevronDown, Plus
 } from "lucide-react";
 import { useIsLiked, useToggleLike } from "@/hooks/useSongs";
 import LyricsDisplay from "./LyricsDisplay";
+import AudioVisualizer from "./AudioVisualizer";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useSwipeGestures } from "@/hooks/useUIFeatures";
 
 interface FullScreenPlayerProps {
   isOpen: boolean;
@@ -33,11 +35,13 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
     playlistName,
     crossfadeEnabled,
     crossfadeDuration,
+    frequencyData,
     toggle,
     seek,
     setVolume,
     next,
     previous,
+    addToQueue,
     toggleShuffle,
     toggleRepeat,
     setCrossfadeEnabled,
@@ -46,6 +50,7 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
 
   const [showLyrics, setShowLyrics] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [swipeHint, setSwipeHint] = useState<string | null>(null);
   const { data: isLiked } = useIsLiked(currentSong?.id || "");
   const toggleLike = useToggleLike();
 
@@ -55,6 +60,23 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const handleSwipe = useCallback((direction: "left" | "right" | "up" | "down") => {
+    if (direction === "down") {
+      onClose();
+    } else if (direction === "left") {
+      next();
+      toast.success("Skipped to next song");
+    } else if (direction === "right") {
+      previous();
+      toast.success("Previous song");
+    } else if (direction === "up" && currentSong) {
+      addToQueue(currentSong);
+      toast.success("Added to queue");
+    }
+  }, [onClose, next, previous, addToQueue, currentSong]);
+
+  const { handleTouchStart, handleTouchEnd } = useSwipeGestures(handleSwipe, 60);
 
   const handleShare = async () => {
     if (currentSong) {
@@ -90,7 +112,9 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="fixed inset-0 z-[100] bg-background overflow-hidden"
+          className="fixed inset-0 z-[100] bg-background overflow-hidden touch-pan-y"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Background with album art blur */}
           <div className="absolute inset-0 overflow-hidden">
@@ -104,11 +128,16 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
             <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background" />
           </div>
 
+          {/* Swipe indicator */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+          </div>
+
           <div className="relative h-full flex flex-col p-4 md:p-8">
             {/* Header */}
             <div className="flex items-center justify-between mb-4 md:mb-8">
               <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-                <X className="w-5 h-5" />
+                <ChevronDown className="w-6 h-6" />
               </Button>
               
               {/* Playing from indicator */}
@@ -134,6 +163,13 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
               >
                 <Settings2 className="w-5 h-5" />
               </Button>
+            </div>
+
+            {/* Gesture hints */}
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 flex gap-4 text-xs text-muted-foreground/60">
+              <span>← Prev</span>
+              <span>↓ Close</span>
+              <span>Next →</span>
             </div>
 
             {/* Settings Panel */}
@@ -177,33 +213,40 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
                 </div>
               ) : (
                 <>
-                  {/* Album Art */}
-                  <motion.div 
-                    className="relative"
-                    animate={{ rotate: isPlaying ? 360 : 0 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    style={{ animationPlayState: isPlaying ? "running" : "paused" }}
-                  >
-                    <div className="w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full overflow-hidden shadow-2xl ring-4 ring-primary/20">
-                      {currentSong.cover_url ? (
-                        <img 
-                          src={currentSong.cover_url} 
-                          alt={currentSong.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-                          <Disc3 className="w-24 h-24 text-primary/50" />
-                        </div>
-                      )}
-                    </div>
-                    {/* Vinyl effect center */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-background/80 backdrop-blur-sm shadow-inner flex items-center justify-center">
-                        <div className="w-4 h-4 rounded-full bg-muted" />
+                  {/* Album Art with Visualizer */}
+                  <div className="relative flex flex-col items-center">
+                    <motion.div 
+                      className="relative"
+                      animate={{ rotate: isPlaying ? 360 : 0 }}
+                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      style={{ animationPlayState: isPlaying ? "running" : "paused" }}
+                    >
+                      <div className="w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full overflow-hidden shadow-2xl ring-4 ring-primary/20">
+                        {currentSong.cover_url ? (
+                          <img 
+                            src={currentSong.cover_url} 
+                            alt={currentSong.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+                            <Disc3 className="w-24 h-24 text-primary/50" />
+                          </div>
+                        )}
                       </div>
+                      {/* Vinyl effect center */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-background/80 backdrop-blur-sm shadow-inner flex items-center justify-center">
+                          <div className="w-4 h-4 rounded-full bg-muted" />
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Audio Visualizer */}
+                    <div className="mt-6 w-full max-w-[280px] md:max-w-[320px]">
+                      <AudioVisualizer frequencyData={frequencyData} variant="bars" className="h-12" />
                     </div>
-                  </motion.div>
+                  </div>
 
                   {/* Song Info & Next Up */}
                   <div className="text-center md:text-left space-y-4">
@@ -223,7 +266,7 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
                     </div>
 
                     {/* Next Up Preview */}
-                    {nextSong && crossfadeEnabled && (
+                    {nextSong && (
                       <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -238,10 +281,23 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Up next</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-muted-foreground">
+                            {crossfadeEnabled ? "Crossfading to" : "Up next"}
+                          </p>
                           <p className="text-sm font-medium truncate">{nextSong.title}</p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full h-8 w-8"
+                          onClick={() => {
+                            addToQueue(nextSong);
+                            toast.success("Added to queue");
+                          }}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
                       </motion.div>
                     )}
                   </div>

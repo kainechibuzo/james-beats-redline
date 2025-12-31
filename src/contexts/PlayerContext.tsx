@@ -16,6 +16,7 @@ interface PlayerContextType {
   crossfadeDuration: number;
   playingFrom: "queue" | "playlist" | null;
   playlistName: string | null;
+  frequencyData: Uint8Array;
   play: (song: Song) => void;
   pause: () => void;
   resume: () => void;
@@ -45,6 +46,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const nextAudioRef = useRef<HTMLAudioElement | null>(null);
   const crossfadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Audio analyzer for visualizer
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -59,13 +66,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [playingFrom, setPlayingFrom] = useState<"queue" | "playlist" | null>(null);
   const [playlistName, setPlaylistName] = useState<string | null>(null);
   const [isCrossfading, setIsCrossfading] = useState(false);
+  const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(64));
 
-  // Initialize audio elements
+  // Initialize audio elements and analyzer
   useEffect(() => {
     audioRef.current = new Audio();
     nextAudioRef.current = new Audio();
     audioRef.current.volume = volume;
     nextAudioRef.current.volume = 0;
+    audioRef.current.crossOrigin = "anonymous";
+    nextAudioRef.current.crossOrigin = "anonymous";
     
     audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
     audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -76,12 +86,55 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       if (crossfadeIntervalRef.current) {
         clearInterval(crossfadeIntervalRef.current);
       }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       audioRef.current?.pause();
       nextAudioRef.current?.pause();
+      audioContextRef.current?.close();
       audioRef.current = null;
       nextAudioRef.current = null;
     };
   }, []);
+
+  // Setup audio analyzer
+  const setupAnalyzer = useCallback(() => {
+    if (!audioRef.current || sourceRef.current) return;
+    
+    try {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      analyserRef.current.fftSize = 128;
+      
+      sourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+      sourceRef.current.connect(analyserRef.current);
+      analyserRef.current.connect(audioContextRef.current.destination);
+    } catch (e) {
+      console.warn("Audio analyzer setup failed:", e);
+    }
+  }, []);
+
+  // Update frequency data for visualizer
+  useEffect(() => {
+    const updateFrequencyData = () => {
+      if (analyserRef.current && isPlaying) {
+        const data = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(data);
+        setFrequencyData(data);
+      }
+      animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
+    };
+
+    if (isPlaying) {
+      updateFrequencyData();
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying]);
 
   const handleTimeUpdate = useCallback(() => {
     if (!audioRef.current || isCrossfading) return;
@@ -254,10 +307,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     audioRef.current.volume = volume;
     audioRef.current.play().then(() => {
       setIsPlaying(true);
+      setupAnalyzer();
       trackPlay.mutate(song.id);
       updateListeningActivity(song);
     }).catch(console.error);
-  }, [trackPlay, updateListeningActivity, volume]);
+  }, [trackPlay, updateListeningActivity, volume, setupAnalyzer]);
 
   const play = useCallback((song: Song) => {
     setCurrentSong(song);
@@ -414,6 +468,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         crossfadeDuration,
         playingFrom,
         playlistName,
+        frequencyData,
         play,
         pause,
         resume,
