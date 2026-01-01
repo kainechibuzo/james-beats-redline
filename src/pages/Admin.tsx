@@ -27,10 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Shield, Users, Music, Disc, Database, TrendingUp, 
   Calendar, BarChart3, HardDrive, AlertTriangle, Heart, 
-  ListMusic, Play, UserPlus, PieChart
+  ListMusic, Play, UserPlus, PieChart, CreditCard
 } from "lucide-react";
 import AlbumManagement from "@/components/admin/AlbumManagement";
 import ArtistPromotion from "@/components/admin/ArtistPromotion";
+import PaymentSettings from "@/components/admin/PaymentSettings";
 import {
   LineChart,
   Line,
@@ -719,6 +720,10 @@ const Admin = () => {
             <HardDrive className="w-4 h-4" />
             Storage
           </TabsTrigger>
+          <TabsTrigger value="payments" className="gap-2">
+            <CreditCard className="w-4 h-4" />
+            Payments
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -872,6 +877,10 @@ const Admin = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="payments">
+          <PaymentSettings />
         </TabsContent>
       </Tabs>
     </div>

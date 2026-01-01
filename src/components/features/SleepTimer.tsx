@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Timer, Moon, X } from "lucide-react";
 import { toast } from "sonner";
+import PremiumFeatureGate from "@/components/subscription/PremiumFeatureGate";
 
 const timerOptions = [
   { label: "15 min", minutes: 15 },
@@ -54,40 +55,42 @@ const SleepTimer = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Moon className="w-5 h-5 text-primary" />
-          Sleep Timer
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {activeTimer ? (
-          <div className="text-center space-y-4">
-            <div className="text-4xl font-bold text-primary">{formatTime(remainingTime)}</div>
-            <p className="text-sm text-muted-foreground">Music will stop after the timer ends</p>
-            <Button variant="destructive" onClick={cancelTimer} className="gap-2">
-              <X className="w-4 h-4" />
-              Cancel Timer
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {timerOptions.map((option) => (
-              <Button
-                key={option.minutes}
-                variant="outline"
-                onClick={() => startTimer(option.minutes)}
-                className="gap-2"
-              >
-                <Timer className="w-4 h-4" />
-                {option.label}
+    <PremiumFeatureGate featureName="Sleep Timer">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Moon className="w-5 h-5 text-primary" />
+            Sleep Timer
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activeTimer ? (
+            <div className="text-center space-y-4">
+              <div className="text-4xl font-bold text-primary">{formatTime(remainingTime)}</div>
+              <p className="text-sm text-muted-foreground">Music will stop after the timer ends</p>
+              <Button variant="destructive" onClick={cancelTimer} className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel Timer
               </Button>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {timerOptions.map((option) => (
+                <Button
+                  key={option.minutes}
+                  variant="outline"
+                  onClick={() => startTimer(option.minutes)}
+                  className="gap-2"
+                >
+                  <Timer className="w-4 h-4" />
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </PremiumFeatureGate>
   );
 };
 
