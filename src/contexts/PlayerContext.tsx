@@ -68,6 +68,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [isCrossfading, setIsCrossfading] = useState(false);
   const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(64));
 
+  // Refs to avoid stale closures in handleSongEnd
+  const queueRef = useRef<Song[]>([]);
+  const queueIndexRef = useRef<number>(-1);
+  
+  useEffect(() => {
+    queueRef.current = queue;
+    queueIndexRef.current = queueIndex;
+  }, [queue, queueIndex]);
+
   // Initialize audio elements and analyzer
   useEffect(() => {
     audioRef.current = new Audio();
@@ -79,7 +88,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     
     audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
     audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audioRef.current.addEventListener("ended", handleSongEnd);
     audioRef.current.addEventListener("error", handleError);
 
     return () => {
@@ -242,10 +250,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
       
-      // Re-attach event listeners
+      // Re-attach event listeners (ended listener is handled by useEffect)
       audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
       audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
-      audioRef.current.addEventListener("ended", handleSongEnd);
       audioRef.current.addEventListener("error", handleError);
     }
     
@@ -258,24 +265,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     trackPlay.mutate(nextSong.id);
     updateListeningActivity(nextSong);
   }, [volume, handleTimeUpdate, handleLoadedMetadata, handleError, trackPlay]);
-
-  const handleSongEnd = useCallback(() => {
-    if (isCrossfading) return; // Already handled by crossfade
-    
-    if (repeat === "one") {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play();
-      }
-    } else if (queueIndex < queue.length - 1) {
-      next();
-    } else if (repeat === "all" && queue.length > 0) {
-      setQueueIndex(0);
-      playSongInternal(queue[0]);
-    } else {
-      setIsPlaying(false);
-    }
-  }, [repeat, queue, queueIndex, isCrossfading]);
 
   const updateListeningActivity = useCallback(async (song: Song) => {
     if (!user) return;
@@ -312,6 +301,49 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       updateListeningActivity(song);
     }).catch(console.error);
   }, [trackPlay, updateListeningActivity, volume, setupAnalyzer]);
+
+  // handleSongEnd - defined after playSongInternal to avoid hoisting issues
+  const handleSongEnd = useCallback(() => {
+    if (isCrossfading) return; // Already handled by crossfade
+    
+    const currentQueue = queueRef.current;
+    const currentIndex = queueIndexRef.current;
+    
+    if (repeat === "one") {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+      }
+    } else if (currentIndex < currentQueue.length - 1) {
+      // Play next song
+      const nextIndex = currentIndex + 1;
+      const nextSong = currentQueue[nextIndex];
+      if (nextSong) {
+        setQueueIndex(nextIndex);
+        setCurrentSong(nextSong);
+        playSongInternal(nextSong);
+      }
+    } else if (repeat === "all" && currentQueue.length > 0) {
+      setQueueIndex(0);
+      setCurrentSong(currentQueue[0]);
+      playSongInternal(currentQueue[0]);
+    } else {
+      setIsPlaying(false);
+    }
+  }, [repeat, isCrossfading, playSongInternal]);
+
+  // Attach ended event listener whenever handleSongEnd changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    const onEnded = () => handleSongEnd();
+    audio.addEventListener("ended", onEnded);
+    
+    return () => {
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [handleSongEnd]);
 
   const play = useCallback((song: Song) => {
     setCurrentSong(song);
