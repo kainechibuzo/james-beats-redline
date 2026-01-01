@@ -10,8 +10,8 @@ import {
   SlidersHorizontal, Moon, Zap, Music, Palette
 } from "lucide-react";
 import { 
-  useEqualizer, useSleepTimer, useCrossfade, 
-  usePlaybackSpeed, useAudioNormalization, useGaplessPlayback,
+  useEqualizer, useSleepTimer,
+  usePlaybackSpeed, useAudioNormalization,
   EQ_PRESETS, EQPresetName
 } from "@/hooks/useAdvancedAudio";
 import { useAccentColor, ACCENT_COLORS } from "@/hooks/useUIFeatures";
@@ -24,13 +24,11 @@ interface AudioSettingsProps {
 }
 
 const AudioSettings = ({ open, onClose }: AudioSettingsProps) => {
-  const { pause } = usePlayer();
+  const { pause, crossfadeEnabled, crossfadeDuration, gaplessEnabled, setCrossfadeEnabled, setCrossfadeDuration, setGaplessEnabled } = usePlayer();
   const eq = useEqualizer();
   const sleepTimer = useSleepTimer(() => pause());
-  const crossfade = useCrossfade();
   const playbackSpeed = usePlaybackSpeed();
   const normalization = useAudioNormalization();
-  const gapless = useGaplessPlayback();
   const { currentColor, colors, setAccentColor } = useAccentColor();
 
   const formatTime = (seconds: number) => {
@@ -182,15 +180,20 @@ const AudioSettings = ({ open, onClose }: AudioSettingsProps) => {
                     </div>
 
                     {/* Gapless Playback */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Music className="w-4 h-4 text-primary" />
-                        <span className="font-medium">Gapless Playback</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Music className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Gapless Playback</span>
+                        </div>
+                        <Switch 
+                          checked={gaplessEnabled} 
+                          onCheckedChange={setGaplessEnabled}
+                        />
                       </div>
-                      <Switch 
-                        checked={gapless.enabled} 
-                        onCheckedChange={gapless.setEnabled}
-                      />
+                      <p className="text-xs text-muted-foreground">
+                        Seamless transitions between songs without silence
+                      </p>
                     </div>
                   </div>
                 </TabsContent>
@@ -205,23 +208,26 @@ const AudioSettings = ({ open, onClose }: AudioSettingsProps) => {
                           <span className="font-medium">Crossfade</span>
                         </div>
                         <Switch 
-                          checked={crossfade.enabled} 
-                          onCheckedChange={crossfade.setEnabled}
+                          checked={crossfadeEnabled} 
+                          onCheckedChange={setCrossfadeEnabled}
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Blend the end of one song with the start of the next
+                      </p>
                       
-                      {crossfade.enabled && (
+                      {crossfadeEnabled && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">Duration</span>
-                            <span className="text-sm">{crossfade.duration}s</span>
+                            <span className="text-sm">{crossfadeDuration}s</span>
                           </div>
                           <Slider
-                            value={[crossfade.duration]}
+                            value={[crossfadeDuration]}
                             min={1}
                             max={12}
                             step={1}
-                            onValueChange={([v]) => crossfade.setDuration(v)}
+                            onValueChange={([v]) => setCrossfadeDuration(v)}
                           />
                         </div>
                       )}

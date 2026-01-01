@@ -14,6 +14,7 @@ interface PlayerContextType {
   repeat: "off" | "one" | "all";
   crossfadeEnabled: boolean;
   crossfadeDuration: number;
+  gaplessEnabled: boolean;
   playingFrom: "queue" | "playlist" | null;
   playlistName: string | null;
   frequencyData: Uint8Array;
@@ -33,6 +34,7 @@ interface PlayerContextType {
   toggleRepeat: () => void;
   setCrossfadeEnabled: (enabled: boolean) => void;
   setCrossfadeDuration: (duration: number) => void;
+  setGaplessEnabled: (enabled: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -63,10 +65,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [repeat, setRepeat] = useState<"off" | "one" | "all">("off");
   const [crossfadeEnabled, setCrossfadeEnabledState] = useState(true);
   const [crossfadeDuration, setCrossfadeDurationState] = useState(5); // seconds
+  const [gaplessEnabled, setGaplessEnabledState] = useState(true);
   const [playingFrom, setPlayingFrom] = useState<"queue" | "playlist" | null>(null);
   const [playlistName, setPlaylistName] = useState<string | null>(null);
   const [isCrossfading, setIsCrossfading] = useState(false);
   const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(64));
+  const [isPreloading, setIsPreloading] = useState(false);
 
   // Refs to avoid stale closures in handleSongEnd
   const queueRef = useRef<Song[]>([]);
@@ -149,12 +153,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const time = audioRef.current.currentTime;
     setCurrentTime(time);
     
-    // Check if we should start crossfade
     const dur = audioRef.current.duration;
+    
+    // Crossfade takes priority over gapless
     if (crossfadeEnabled && dur && time >= dur - crossfadeDuration && !isCrossfading) {
       startCrossfade();
+    } 
+    // Gapless preloading: start preloading next song 3 seconds before end
+    else if (gaplessEnabled && !crossfadeEnabled && dur && time >= dur - 3 && !isPreloading) {
+      preloadNextSong();
     }
-  }, [crossfadeEnabled, crossfadeDuration, isCrossfading]);
+  }, [crossfadeEnabled, crossfadeDuration, gaplessEnabled, isCrossfading, isPreloading]);
 
   const handleLoadedMetadata = useCallback(() => {
     setDuration(audioRef.current?.duration || 0);
@@ -321,7 +330,35 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       if (nextSong) {
         setQueueIndex(nextIndex);
         setCurrentSong(nextSong);
-        playSongInternal(nextSong);
+        
+        // Use preloaded audio for gapless playback
+        if (gaplessEnabled && isPreloading && nextAudioRef.current?.src) {
+          // Swap audio elements for gapless transition
+          audioRef.current?.pause();
+          const temp = audioRef.current;
+          audioRef.current = nextAudioRef.current;
+          nextAudioRef.current = temp;
+          
+          if (audioRef.current) {
+            audioRef.current.volume = volume;
+            audioRef.current.play().catch(console.error);
+            audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
+            audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
+            audioRef.current.addEventListener("error", handleError);
+          }
+          
+          if (nextAudioRef.current) {
+            nextAudioRef.current.pause();
+            nextAudioRef.current.src = "";
+          }
+          
+          setIsPreloading(false);
+          setIsPlaying(true);
+          trackPlay.mutate(nextSong.id);
+          updateListeningActivity(nextSong);
+        } else {
+          playSongInternal(nextSong);
+        }
       }
     } else if (repeat === "all" && currentQueue.length > 0) {
       setQueueIndex(0);
@@ -330,7 +367,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setIsPlaying(false);
     }
-  }, [repeat, isCrossfading, playSongInternal]);
+  }, [repeat, isCrossfading, gaplessEnabled, isPreloading, volume, playSongInternal, handleTimeUpdate, handleLoadedMetadata, handleError, trackPlay, updateListeningActivity]);
 
   // Attach ended event listener whenever handleSongEnd changes
   useEffect(() => {
@@ -479,11 +516,51 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const setCrossfadeEnabled = useCallback((enabled: boolean) => {
     setCrossfadeEnabledState(enabled);
+    // Disable gapless when crossfade is enabled
+    if (enabled) {
+      setGaplessEnabledState(false);
+    }
   }, []);
 
   const setCrossfadeDuration = useCallback((duration: number) => {
     setCrossfadeDurationState(duration);
   }, []);
+
+  const setGaplessEnabled = useCallback((enabled: boolean) => {
+    setGaplessEnabledState(enabled);
+    // Disable crossfade when gapless is enabled
+    if (enabled) {
+      setCrossfadeEnabledState(false);
+    }
+  }, []);
+
+  // Preload next song for gapless playback
+  const preloadNextSong = useCallback(() => {
+    if (isPreloading || !nextAudioRef.current) return;
+    
+    const currentQueue = queueRef.current;
+    const currentIndex = queueIndexRef.current;
+    
+    let nextIndex = currentIndex + 1;
+    if (shuffle) {
+      nextIndex = Math.floor(Math.random() * currentQueue.length);
+    }
+    
+    if (nextIndex >= currentQueue.length) {
+      if (repeat === "all") {
+        nextIndex = 0;
+      } else {
+        return;
+      }
+    }
+    
+    const nextSong = currentQueue[nextIndex];
+    if (!nextSong) return;
+    
+    setIsPreloading(true);
+    nextAudioRef.current.src = nextSong.file_url;
+    nextAudioRef.current.load();
+  }, [isPreloading, shuffle, repeat]);
 
   return (
     <PlayerContext.Provider
@@ -498,6 +575,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         repeat,
         crossfadeEnabled,
         crossfadeDuration,
+        gaplessEnabled,
         playingFrom,
         playlistName,
         frequencyData,
@@ -517,6 +595,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         toggleRepeat,
         setCrossfadeEnabled,
         setCrossfadeDuration,
+        setGaplessEnabled,
       }}
     >
       {children}
