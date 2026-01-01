@@ -8,6 +8,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import PremiumFeatureGate from "@/components/subscription/PremiumFeatureGate";
 
 const MOODS = ["energetic", "chill", "focus", "party", "romantic", "workout", "sad", "happy"];
 
@@ -334,6 +335,7 @@ const DJ = () => {
   }
 
   return (
+    <PremiumFeatureGate featureName="AI DJ">
     <div className="pb-32 animate-fade-in">
       {/* DJ Header */}
       <div className="bg-gradient-to-br from-primary/30 via-card to-primary/10 rounded-2xl p-6 mb-6 border border-primary/20">
@@ -554,6 +556,7 @@ const DJ = () => {
         </div>
       )}
     </div>
+    </PremiumFeatureGate>
   );
 };
 

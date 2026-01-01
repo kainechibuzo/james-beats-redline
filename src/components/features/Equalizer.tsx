@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { SlidersHorizontal, RotateCcw } from "lucide-react";
+import PremiumFeatureGate from "@/components/subscription/PremiumFeatureGate";
 
 const bands = [
   { name: "60Hz", default: 50 },
@@ -44,48 +45,50 @@ const Equalizer = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-primary" />
-            Equalizer
-          </span>
-          <Button variant="ghost" size="icon" onClick={reset}>
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {presets.map((preset) => (
-            <Button
-              key={preset.name}
-              variant="outline"
-              size="sm"
-              onClick={() => applyPreset(preset)}
-            >
-              {preset.name}
+    <PremiumFeatureGate featureName="Audio Equalizer">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-primary" />
+              Equalizer
+            </span>
+            <Button variant="ghost" size="icon" onClick={reset}>
+              <RotateCcw className="w-4 h-4" />
             </Button>
-          ))}
-        </div>
-        <div className="flex justify-between gap-1">
-          {bands.map((band, index) => (
-            <div key={band.name} className="flex flex-col items-center gap-2">
-              <Slider
-                orientation="vertical"
-                value={[values[index]]}
-                onValueChange={(val) => handleChange(index, val)}
-                max={100}
-                step={1}
-                className="h-24"
-              />
-              <span className="text-[10px] text-muted-foreground">{band.name}</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {presets.map((preset) => (
+              <Button
+                key={preset.name}
+                variant="outline"
+                size="sm"
+                onClick={() => applyPreset(preset)}
+              >
+                {preset.name}
+              </Button>
+            ))}
+          </div>
+          <div className="flex justify-between gap-1">
+            {bands.map((band, index) => (
+              <div key={band.name} className="flex flex-col items-center gap-2">
+                <Slider
+                  orientation="vertical"
+                  value={[values[index]]}
+                  onValueChange={(val) => handleChange(index, val)}
+                  max={100}
+                  step={1}
+                  className="h-24"
+                />
+                <span className="text-[10px] text-muted-foreground">{band.name}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </PremiumFeatureGate>
   );
 };
 

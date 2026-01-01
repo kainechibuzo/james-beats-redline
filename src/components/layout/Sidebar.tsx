@@ -1,4 +1,4 @@
-import { Home, Search, Library, Upload, Heart, Clock, User, LogIn, LogOut, Menu, X, Disc3, Calendar, Disc } from "lucide-react";
+import { Home, Search, Library, Upload, Heart, Clock, User, LogIn, LogOut, Menu, X, Disc3, Calendar, Disc, Crown } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
+import { UpgradeButton } from "@/components/subscription/PremiumFeatureGate";
+
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -111,6 +113,7 @@ const Sidebar = () => {
           </nav>
 
           <div className="p-3 border-t border-sidebar-border space-y-2">
+            <UpgradeButton className="w-full text-sm" />
             {user ? <>
                 <Link to="/profile" onClick={handleNavClick} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent/50 transition-all duration-200">
                   <User className="w-4 h-4" />
@@ -170,6 +173,7 @@ const Sidebar = () => {
       </nav>
 
       <div className="p-5 border-t border-sidebar-border space-y-3 py-[60px]">
+        <UpgradeButton className="w-full" />
         {user ? <>
             <Link to="/profile" className="flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-sidebar-accent/50 transition-all duration-200">
               <User className="w-6 h-6" />
