@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "./components/theme-provider";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -28,91 +29,95 @@ import Welcome from "./pages/Welcome";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <PlayerProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Welcome />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route element={<MainLayout />}>
-                <Route path="/home" element={<Home />} />
-                <Route path="/search" element={<Search />} />
-                <Route
-                  path="/library"
-                  element={
-                    <ProtectedRoute>
-                      <Library />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/upload"
-                  element={
-                    <ProtectedRoute>
-                      <Upload />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/liked"
-                  element={
-                    <ProtectedRoute>
-                      <LikedSongs />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/liked-albums"
-                  element={
-                    <ProtectedRoute>
-                      <LikedAlbums />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/recent"
-                  element={
-                    <ProtectedRoute>
-                      <RecentlyPlayed />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/playlist/:id"
-                  element={
-                    <ProtectedRoute>
-                      <PlaylistPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/artist/:name" element={<Artist />} />
-                <Route path="/albums" element={<Albums />} />
-                <Route path="/album/:id" element={<Album />} />
-                <Route path="/dj" element={<DJ />} />
-                <Route path="/recap" element={<YearlyRecap />} />
-                <Route path="/admin" element={<Admin />} />
-              </Route>
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </PlayerProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <AuthProvider>
+          <PlayerProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Welcome />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route element={<MainLayout />}>
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route
+                      path="/library"
+                      element={
+                        <ProtectedRoute>
+                          <Library />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/upload"
+                      element={
+                        <ProtectedRoute>
+                          <Upload />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/liked"
+                      element={
+                        <ProtectedRoute>
+                          <LikedSongs />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/liked-albums"
+                      element={
+                        <ProtectedRoute>
+                          <LikedAlbums />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/recent"
+                      element={
+                        <ProtectedRoute>
+                          <RecentlyPlayed />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/playlist/:id"
+                      element={
+                        <ProtectedRoute>
+                          <PlaylistPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path="/artist/:name" element={<Artist />} />
+                    <Route path="/albums" element={<Albums />} />
+                    <Route path="/album/:id" element={<Album />} />
+                    <Route path="/dj" element={<DJ />} />
+                    <Route path="/recap" element={<YearlyRecap />} />
+                    <Route path="/admin" element={<Admin />} />
+                  </Route>
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </PlayerProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

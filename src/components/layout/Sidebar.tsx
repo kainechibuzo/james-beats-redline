@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 import { UpgradeButton } from "@/components/subscription/PremiumFeatureGate";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -76,13 +77,14 @@ const Sidebar = () => {
 
         {/* Mobile Sidebar */}
         <aside className={cn("fixed top-0 left-0 w-64 bg-sidebar h-screen flex flex-col border-r border-sidebar-border z-50 transition-transform duration-300", isOpen ? "translate-x-0" : "-translate-x-full")}>
-          <div className="p-4 pt-16">
+          <div className="p-4 pt-16 flex items-center justify-between">
             <h1 className="text-xl font-bold text-primary flex items-center gap-2">
               <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-primary-foreground text-xs font-bold">JB</span>
               </div>
               James Beats
             </h1>
+            <ThemeToggle />
           </div>
 
           <nav className="flex-1 px-2">
@@ -134,15 +136,15 @@ const Sidebar = () => {
       </>;
   }
 
-  // Desktop Sidebar
   return <aside className="w-72 bg-sidebar h-screen flex flex-col border-r border-sidebar-border">
-      <div className="p-6">
+      <div className="p-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
             <span className="text-primary-foreground text-base font-bold">JB</span>
           </div>
           James Beats
         </h1>
+        <ThemeToggle />
       </div>
 
       <nav className="flex-1 px-4">
