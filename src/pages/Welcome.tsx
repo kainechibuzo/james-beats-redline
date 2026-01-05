@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Music, Headphones, Radio, Sparkles, Download, Upload, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import welcomeNature1 from "@/assets/welcome-nature-1.jpg";
-import welcomeNature2 from "@/assets/welcome-nature-2.jpg";
-import welcomeNature3 from "@/assets/welcome-nature-3.jpg";
-import heroNature from "@/assets/hero-nature.jpg";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import abstractMusic1 from "@/assets/abstract-music-1.jpg";
+import abstractMusic2 from "@/assets/abstract-music-2.jpg";
+import abstractMusic3 from "@/assets/abstract-music-3.jpg";
+import abstractMusic4 from "@/assets/abstract-music-4.jpg";
 
-const heroImages = [welcomeNature1, welcomeNature2, welcomeNature3, heroNature];
+const heroImages = [abstractMusic1, abstractMusic2, abstractMusic3, abstractMusic4];
 
 const otherProducts = [
   { name: "Air AI Monitor", description: "Smart air quality tracking" },
@@ -65,13 +66,18 @@ const Welcome = () => {
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 bg-background overflow-y-auto"
       >
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4 z-30">
+          <ThemeToggle />
+        </div>
+
         {/* Background Slideshow */}
         <div className="absolute inset-0">
           <AnimatePresence mode="wait">
             <motion.img
               key={currentImageIndex}
               src={heroImages[currentImageIndex]}
-              alt="Happy people enjoying music"
+              alt="Abstract music art"
               className="w-full h-full object-cover"
               initial={{ opacity: 0, scale: 1.1 }}
               animate={{ opacity: 1, scale: 1 }}

@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
-import heroImage from "@/assets/hero-nature.jpg";
+import abstractMusicHero from "@/assets/abstract-music-3.jpg";
 
 const HeroSection = () => {
   return (
     <section
       className="relative h-96 rounded-lg overflow-hidden mb-8"
       style={{
-        backgroundImage: `url(${heroImage})`,
+        backgroundImage: `url(${abstractMusicHero})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
