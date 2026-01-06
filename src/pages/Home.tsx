@@ -3,7 +3,7 @@ import HeroSection from "@/components/home/HeroSection";
 import SongCard from "@/components/home/SongCard";
 import { useSongs, useRecentlyPlayed } from "@/hooks/useSongs";
 import { useAlbums, useFeaturedAlbums } from "@/hooks/useAlbums";
-import { useFeaturedArtists } from "@/hooks/useAdmin";
+import { useTrendingSongs, useFeaturedSongs, useFeaturedArtistsFromPlays } from "@/hooks/useTrendingSongs";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,23 +17,13 @@ const Home = () => {
   const { data: recentlyPlayed, isLoading: recentLoading } = useRecentlyPlayed();
   const { data: featuredAlbums, isLoading: albumsLoading } = useFeaturedAlbums();
   const { data: allAlbums } = useAlbums();
-  const { data: featuredArtists, isLoading: artistsLoading } = useFeaturedArtists();
+  const { data: trendingSongs, isLoading: trendingLoading } = useTrendingSongs(6);
+  const { data: featuredSongs, isLoading: featuredLoading } = useFeaturedSongs(6);
+  const { data: featuredArtists, isLoading: artistsLoading } = useFeaturedArtistsFromPlays(8);
   const { playSong } = usePlayer();
   const isMobile = useIsMobile();
 
-  const featuredSongs = songs?.slice(0, 6) || [];
-  const trendingSongs = songs?.slice(0, 4) || [];
   const recentAlbums = allAlbums?.slice(0, 6) || [];
-
-  // Get unique artists from songs
-  const uniqueArtists = songs
-    ? Array.from(new Set(songs.map(s => s.artist)))
-        .slice(0, 8)
-        .map(artist => {
-          const song = songs.find(s => s.artist === artist);
-          return { name: artist, cover: song?.cover_url };
-        })
-    : [];
 
   const handlePlayAlbum = (albumTitle: string, artistName: string) => {
     const albumSongs = songs?.filter(
@@ -48,8 +38,8 @@ const Home = () => {
     <div className="pb-32 animate-fade-in">
       <HeroSection />
 
-      {/* Featured Artists */}
-      {uniqueArtists.length > 0 && (
+      {/* Featured Artists - based on play counts */}
+      {featuredArtists && featuredArtists.length > 0 && (
         <section className="mb-6 md:mb-8">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Artists</h2>
@@ -61,17 +51,17 @@ const Home = () => {
             </Link>
           </div>
           <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {uniqueArtists.map((artist) => (
+            {featuredArtists.map((artist) => (
               <Link
                 key={artist.name}
                 to={`/artist/${encodeURIComponent(artist.name)}`}
                 className="flex flex-col items-center gap-2 min-w-[80px] md:min-w-[100px] hover:opacity-80 transition-opacity"
               >
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 overflow-hidden flex items-center justify-center">
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-muted to-card overflow-hidden flex items-center justify-center border border-border">
                   {artist.cover ? (
                     <img src={artist.cover} alt={artist.name} className="w-full h-full object-cover" />
                   ) : (
-                    <Users className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+                    <Users className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground" />
                   )}
                 </div>
                 <span className="text-xs md:text-sm font-medium text-center truncate max-w-[80px] md:max-w-[100px]">
@@ -162,10 +152,10 @@ const Home = () => {
         </section>
       )}
 
-      {/* Featured Songs */}
+      {/* Featured Songs - based on play counts */}
       <section className="mb-6 md:mb-8">
         <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Tracks</h2>
-        {songsLoading ? (
+        {featuredLoading ? (
           <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {Array.from({ length: isMobile ? 6 : 6 }).map((_, i) => (
               <div key={i} className="space-y-1.5">
@@ -175,7 +165,7 @@ const Home = () => {
               </div>
             ))}
           </div>
-        ) : featuredSongs.length > 0 ? (
+        ) : featuredSongs && featuredSongs.length > 0 ? (
           <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {featuredSongs.map((song) => (
               <SongCard key={song.id} song={song} showAlbum compact />
@@ -195,8 +185,8 @@ const Home = () => {
         )}
       </section>
 
-      {/* Trending Now */}
-      {trendingSongs.length > 0 && (
+      {/* Trending Now - based on play counts */}
+      {trendingSongs && trendingSongs.length > 0 && (
         <section>
           <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Trending Now</h2>
           <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>

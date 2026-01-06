@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Sidebar from "./Sidebar";
 import Player from "./Player";
 import MiniPlayer from "@/components/features/MiniPlayer";
+import BottomNav from "./BottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,10 +67,11 @@ const MainLayout = () => {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
-        <div className={isMobile ? "p-4 pt-16" : "p-8"}>
+        <div className={isMobile ? "p-4 pt-16 pb-40" : "p-8"}>
           <Outlet />
         </div>
       </main>
+      <BottomNav />
       <MiniPlayer />
       <Player />
     </div>
