@@ -168,7 +168,7 @@ const Home = () => {
         ) : featuredSongs && featuredSongs.length > 0 ? (
           <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {featuredSongs.map((song) => (
-              <SongCard key={song.id} song={song} showAlbum compact />
+              <SongCard key={song.id} song={song} showAlbum compact showPlayCount />
             ))}
           </div>
         ) : (
@@ -191,7 +191,7 @@ const Home = () => {
           <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Trending Now</h2>
           <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {trendingSongs.map((song) => (
-              <SongCard key={song.id} song={song} showAlbum compact />
+              <SongCard key={song.id} song={song} showAlbum compact showPlayCount />
             ))}
           </div>
         </section>

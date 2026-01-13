@@ -8,7 +8,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import SongCard from "@/components/home/SongCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Play, Shuffle, Users, Music, Clock } from "lucide-react";
+import { Play, Shuffle, Users, Music, Clock, Disc } from "lucide-react";
+import { useSimilarArtists, useArtistDiscography } from "@/hooks/useSimilarArtists";
 
 const useArtistSongs = (artistName: string) => {
   return useQuery({
@@ -32,6 +33,8 @@ const Artist = () => {
   const { name } = useParams<{ name: string }>();
   const artistName = decodeURIComponent(name || "");
   const { data: songs, isLoading } = useArtistSongs(artistName);
+  const { data: discography } = useArtistDiscography(artistName);
+  const { data: similarArtists } = useSimilarArtists(artistName, songs?.[0]?.genre || undefined);
   const { setQueue, play } = usePlayer();
   const isMobile = useIsMobile();
 
@@ -164,27 +167,47 @@ const Artist = () => {
         </h2>
         <div className={`grid gap-3 ${isMobile ? "grid-cols-2" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"}`}>
           {songs.slice(0, 10).map((song) => (
-            <SongCard key={song.id} song={song} compact showAlbum />
+            <SongCard key={song.id} song={song} compact showAlbum showPlayCount />
           ))}
         </div>
       </div>
 
-      {/* All Songs */}
-      {songs.length > 10 && (
+      {/* Discography */}
+      {discography && discography.length > 0 && (
         <div className="p-4 md:p-8 pt-0">
-          <h2 className={`font-bold mb-4 ${isMobile ? "text-lg" : "text-2xl"}`}>
-            All Songs
+          <h2 className={`font-bold mb-4 flex items-center gap-2 ${isMobile ? "text-lg" : "text-2xl"}`}>
+            <Disc className="w-5 h-5 md:w-6 md:h-6" />
+            Discography
           </h2>
-          <div className={`grid gap-3 ${isMobile ? "grid-cols-2" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"}`}>
-            {songs.slice(10).map((song) => (
-              <SongCard key={song.id} song={song} compact showAlbum />
+          <div className={`grid gap-4 ${isMobile ? "grid-cols-2" : "grid-cols-2 md:grid-cols-4 lg:grid-cols-6"}`}>
+            {discography.map((album) => (
+              <Link
+                key={album.id}
+                to={`/album/${album.id}`}
+                className="bg-card/50 rounded-lg p-3 hover:bg-card transition-colors cursor-pointer group"
+              >
+                <div className="aspect-square rounded-md overflow-hidden mb-2 relative">
+                  {album.cover_url ? (
+                    <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-secondary flex items-center justify-center">
+                      <Disc className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="w-10 h-10 text-white" fill="currentColor" />
+                  </div>
+                </div>
+                <p className="font-medium text-sm truncate">{album.title}</p>
+                <p className="text-xs text-muted-foreground">{album.release_year || "Album"}</p>
+              </Link>
             ))}
           </div>
         </div>
       )}
 
-      {/* Albums */}
-      {uniqueAlbums.length > 0 && (
+      {/* Albums from songs */}
+      {uniqueAlbums.length > 0 && (!discography || discography.length === 0) && (
         <div className="p-4 md:p-8 pt-0">
           <h2 className={`font-bold mb-4 ${isMobile ? "text-lg" : "text-2xl"}`}>
             Albums
@@ -216,6 +239,55 @@ const Artist = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Similar Artists */}
+      {similarArtists && similarArtists.length > 0 && (
+        <div className="p-4 md:p-8 pt-0">
+          <h2 className={`font-bold mb-4 flex items-center gap-2 ${isMobile ? "text-lg" : "text-2xl"}`}>
+            <Users className="w-5 h-5 md:w-6 md:h-6" />
+            Similar Artists
+          </h2>
+          <div className={`grid gap-4 ${isMobile ? "grid-cols-3" : "grid-cols-3 md:grid-cols-6"}`}>
+            {similarArtists.map((artist) => (
+              <Link
+                key={artist.artist}
+                to={`/artist/${encodeURIComponent(artist.artist)}`}
+                className="text-center group"
+              >
+                <div 
+                  className="aspect-square rounded-full bg-primary/20 flex items-center justify-center mb-2 mx-auto overflow-hidden group-hover:ring-2 ring-primary transition-all"
+                  style={{
+                    backgroundImage: artist.coverUrl ? `url(${artist.coverUrl})` : undefined,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    maxWidth: isMobile ? "80px" : "120px",
+                  }}
+                >
+                  {!artist.coverUrl && (
+                    <Users className={isMobile ? "w-6 h-6" : "w-10 h-10"} />
+                  )}
+                </div>
+                <p className="font-medium text-sm truncate">{artist.artist}</p>
+                <p className="text-xs text-muted-foreground">{artist.songCount} songs</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* All Songs */}
+      {songs.length > 10 && (
+        <div className="p-4 md:p-8 pt-0">
+          <h2 className={`font-bold mb-4 ${isMobile ? "text-lg" : "text-2xl"}`}>
+            All Songs
+          </h2>
+          <div className={`grid gap-3 ${isMobile ? "grid-cols-2" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"}`}>
+            {songs.slice(10).map((song) => (
+              <SongCard key={song.id} song={song} compact showAlbum showPlayCount />
+            ))}
           </div>
         </div>
       )}

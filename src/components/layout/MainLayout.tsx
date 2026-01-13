@@ -8,11 +8,15 @@ import BottomNav from "./BottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTrackProtection } from "@/hooks/useTrackProtection";
 
 const MainLayout = () => {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  // Enable track protection to prevent unauthorized downloads
+  useTrackProtection(true);
 
   // Prefetch common data on mount for faster navigation
   useEffect(() => {
