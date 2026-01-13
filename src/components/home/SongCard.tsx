@@ -12,6 +12,7 @@ import AddToPlaylistDialog from "@/components/playlist/AddToPlaylistDialog";
 import EditSongDialog from "@/components/songs/EditSongDialog";
 import LyricsEditor from "@/components/lyrics/LyricsEditor";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,9 +36,10 @@ export interface SongCardProps {
   showAlbum?: boolean;
   showDelete?: boolean;
   compact?: boolean;
+  showPlayCount?: boolean;
 }
 
-const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum = false, showDelete = false, compact = false }) => {
+const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum = false, showDelete = false, compact = false, showPlayCount = false }) => {
   const { user } = useAuth();
   const { data: isLiked } = useIsLiked(song.id);
   const toggleLike = useToggleLike();
@@ -89,6 +91,19 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
             decoding="async"
             className={`w-full aspect-square object-cover rounded-md bg-muted ${isSmall ? 'max-w-[120px]' : 'max-w-[180px] md:max-w-none'}`}
           />
+          {showPlayCount && song.play_count > 0 && (
+            <Badge 
+              variant="secondary" 
+              className={cn(
+                "absolute top-1 left-1 bg-black/70 text-white border-0 backdrop-blur-sm",
+                isSmall ? "text-[9px] px-1.5 py-0" : "text-xs px-2 py-0.5"
+              )}
+            >
+              {song.play_count >= 1000 
+                ? `${(song.play_count / 1000).toFixed(1)}K` 
+                : song.play_count} plays
+            </Badge>
+          )}
           <div className={`absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0`}>
             {user && (
               <Button

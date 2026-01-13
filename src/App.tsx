@@ -26,13 +26,14 @@ import DJ from "./pages/DJ";
 import YearlyRecap from "./pages/YearlyRecap";
 import Admin from "./pages/Admin";
 import Welcome from "./pages/Welcome";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <AuthProvider>
           <PlayerProvider>
             <TooltipProvider>
@@ -107,6 +108,7 @@ const App = () => {
                     <Route path="/dj" element={<DJ />} />
                     <Route path="/recap" element={<YearlyRecap />} />
                     <Route path="/admin" element={<Admin />} />
+                    <Route path="/settings" element={<Settings />} />
                   </Route>
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
