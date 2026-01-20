@@ -73,7 +73,7 @@ const Auth = () => {
           }
         } else {
           toast.success("Welcome back to James Beats!");
-          navigate("/");
+          navigate("/home");
         }
       } else {
         const { error } = await signUp(email, password, username || undefined);
@@ -84,8 +84,8 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          toast.success("Account created! Welcome to James Beats!");
-          navigate("/");
+          toast.success("Account created! Please review our terms.");
+          navigate("/terms");
         }
       }
     } catch (error) {
