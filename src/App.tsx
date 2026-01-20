@@ -7,7 +7,9 @@ import { ThemeProvider } from "./components/theme-provider";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import TermsGuard from "./components/auth/TermsGuard";
 import MainLayout from "./components/layout/MainLayout";
+import Terms from "./pages/Terms";
 import Home from "./pages/Home";
 import Search from "./pages/Search";
 import Albums from "./pages/Albums";
@@ -40,10 +42,12 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Welcome />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route element={<MainLayout />}>
+                <TermsGuard>
+                  <Routes>
+                    <Route path="/" element={<Welcome />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route element={<MainLayout />}>
                     <Route path="/home" element={<Home />} />
                     <Route path="/search" element={<Search />} />
                     <Route
@@ -110,9 +114,10 @@ const App = () => {
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </TermsGuard>
               </BrowserRouter>
             </TooltipProvider>
           </PlayerProvider>

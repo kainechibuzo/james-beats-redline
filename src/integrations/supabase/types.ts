@@ -474,6 +474,7 @@ export type Database = {
           following_count: number
           id: string
           subscription_tier: Database["public"]["Enums"]["subscription_tier"]
+          terms_accepted_at: string | null
           total_likes: number
           total_plays: number
           updated_at: string
@@ -489,6 +490,7 @@ export type Database = {
           following_count?: number
           id?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
+          terms_accepted_at?: string | null
           total_likes?: number
           total_plays?: number
           updated_at?: string
@@ -504,6 +506,7 @@ export type Database = {
           following_count?: number
           id?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
+          terms_accepted_at?: string | null
           total_likes?: number
           total_plays?: number
           updated_at?: string
