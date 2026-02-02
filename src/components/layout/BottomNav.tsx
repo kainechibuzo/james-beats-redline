@@ -62,7 +62,8 @@ const BottomNav = () => {
           <div className="flex items-center justify-around flex-1">
             {filteredItems.map((item) => {
               const isActive = location.pathname === item.to || 
-                (item.to === "/home" && location.pathname === "/");
+                (item.to === "/home" && location.pathname === "/") ||
+                (item.to === "/" && location.pathname === "/");
               
               return (
                 <Link
