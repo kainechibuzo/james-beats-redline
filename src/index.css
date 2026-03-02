@@ -8,25 +8,25 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* James Beats Black & Silver Theme - Light Mode */
-    --background: 0 0% 96%;
-    --foreground: 0 0% 8%;
+    /* James Beats All-Black Theme - Light Mode (also dark) */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 75%;
 
-    --card: 0 0% 98%;
-    --card-foreground: 0 0% 8%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 75%;
 
-    --popover: 0 0% 98%;
-    --popover-foreground: 0 0% 8%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 75%;
 
     --primary: 0 0% 8%;
     --primary-foreground: 0 0% 75%;
-    --primary-glow: 0 0% 65%;
+    --primary-glow: 0 0% 55%;
 
-    --secondary: 0 0% 88%;
-    --secondary-foreground: 0 0% 15%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 75%;
 
-    --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 50%;
 
     --accent: 0 0% 8%;
     --accent-foreground: 0 0% 75%;
@@ -34,8 +34,8 @@ All colors MUST be HSL.
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 75%;
 
-    --border: 0 0% 75%;
-    --input: 0 0% 88%;
+    --border: 0 0% 55%;
+    --input: 0 0% 14%;
     --ring: 0 0% 65%;
 
     /* Silver accent */
@@ -47,20 +47,20 @@ All colors MUST be HSL.
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 75%));
-    --gradient-glow: linear-gradient(180deg, hsl(0 0% 65% / 0.2), transparent);
+    --gradient-glow: linear-gradient(180deg, hsl(0 0% 65% / 0.3), transparent);
     
     /* Shadows */
-    --shadow-glow: 0 0 40px hsl(0 0% 65% / 0.3);
-    --shadow-elegant: 0 10px 40px -10px hsl(0 0% 0% / 0.15);
+    --shadow-glow: 0 0 40px hsl(0 0% 65% / 0.25);
+    --shadow-elegant: 0 10px 40px -10px hsl(0 0% 65% / 0.2);
 
     /* Sidebar */
-    --sidebar-background: 0 0% 94%;
-    --sidebar-foreground: 0 0% 20%;
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 75%;
     --sidebar-primary: 0 0% 8%;
     --sidebar-primary-foreground: 0 0% 75%;
-    --sidebar-accent: 0 0% 88%;
-    --sidebar-accent-foreground: 0 0% 15%;
-    --sidebar-border: 0 0% 75%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 75%;
+    --sidebar-border: 0 0% 55%;
     --sidebar-ring: 0 0% 65%;
   }
 
