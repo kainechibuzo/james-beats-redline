@@ -7,7 +7,7 @@ import { useTrendingSongs, useFeaturedSongs, useFeaturedArtistsFromPlays } from 
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Music, Disc, Users, ChevronRight, Play, FolderOpen } from "lucide-react";
+import { Music, Disc, Users, ChevronRight, Play, FolderOpen, Shuffle, Rewind } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -24,6 +24,26 @@ const Home = () => {
   const isMobile = useIsMobile();
 
   const recentAlbums = allAlbums?.slice(0, 6) || [];
+
+  // Your Recent Mix - shuffle recently played songs into a "mix"
+  const recentMix = recentlyPlayed && recentlyPlayed.length > 2
+    ? [...recentlyPlayed].sort(() => Math.random() - 0.5).slice(0, 6)
+    : null;
+
+  // Your Throwbacks - songs older than 60 days from recently played or oldest songs
+  const throwbacks = (() => {
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    
+    if (songs && songs.length > 0) {
+      const oldSongs = songs
+        .filter(s => new Date(s.created_at) < sixtyDaysAgo)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 6);
+      return oldSongs.length > 0 ? oldSongs : songs.slice(-6).reverse();
+    }
+    return null;
+  })();
 
   const handlePlayAlbum = (albumTitle: string, artistName: string) => {
     const albumSongs = songs?.filter(
