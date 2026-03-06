@@ -172,6 +172,62 @@ const Home = () => {
         </section>
       )}
 
+      {/* Your Recent Mix */}
+      {user && recentMix && recentMix.length > 0 && (
+        <section className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className={`font-bold flex items-center gap-2 ${isMobile ? 'text-lg' : 'text-2xl'}`}>
+              <Shuffle className="w-5 h-5 text-primary" />
+              Your Recent Mix
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={isMobile ? 'text-xs px-2' : ''}
+              onClick={() => {
+                if (recentMix.length > 0) playSong(recentMix[0], recentMix);
+              }}
+            >
+              Play all
+              <Play className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
+            {recentMix.map((song) => (
+              <SongCard key={`mix-${song.id}`} song={song} showAlbum compact />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Your Throwbacks */}
+      {throwbacks && throwbacks.length > 0 && (
+        <section className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className={`font-bold flex items-center gap-2 ${isMobile ? 'text-lg' : 'text-2xl'}`}>
+              <Rewind className="w-5 h-5 text-primary" />
+              Your Throwbacks
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={isMobile ? 'text-xs px-2' : ''}
+              onClick={() => {
+                if (throwbacks.length > 0) playSong(throwbacks[0], throwbacks);
+              }}
+            >
+              Play all
+              <Play className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
+            {throwbacks.map((song) => (
+              <SongCard key={`throwback-${song.id}`} song={song} showAlbum compact />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Featured Songs - based on play counts */}
       <section className="mb-6 md:mb-8">
         <h2 className={`font-bold mb-3 md:mb-4 ${isMobile ? 'text-lg' : 'text-2xl'}`}>Featured Tracks</h2>
