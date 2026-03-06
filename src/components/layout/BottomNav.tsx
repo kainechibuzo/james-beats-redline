@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Library, Upload, User, X } from "lucide-react";
+import { Home, Search, Library, Upload, User, X, Compass } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ const BottomNav = () => {
 
   const navItems = [
     { to: "/home", icon: Home, label: "Home" },
+    { to: "/explore", icon: Compass, label: "Explore" },
     { to: "/search", icon: Search, label: "Search" },
     { to: "/library", icon: Library, label: "Library" },
     { to: "/upload", icon: Upload, label: "Upload", requiresAuth: true },

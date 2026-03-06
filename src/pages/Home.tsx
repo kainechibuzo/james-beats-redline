@@ -7,7 +7,7 @@ import { useTrendingSongs, useFeaturedSongs, useFeaturedArtistsFromPlays } from 
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Music, Disc, Users, ChevronRight, Play, FolderOpen } from "lucide-react";
+import { Music, Disc, Users, ChevronRight, Play, FolderOpen, Shuffle, Rewind } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -24,6 +24,26 @@ const Home = () => {
   const isMobile = useIsMobile();
 
   const recentAlbums = allAlbums?.slice(0, 6) || [];
+
+  // Your Recent Mix - shuffle recently played songs into a "mix"
+  const recentMix = recentlyPlayed && recentlyPlayed.length > 2
+    ? [...recentlyPlayed].sort(() => Math.random() - 0.5).slice(0, 6)
+    : null;
+
+  // Your Throwbacks - songs older than 60 days from recently played or oldest songs
+  const throwbacks = (() => {
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    
+    if (songs && songs.length > 0) {
+      const oldSongs = songs
+        .filter(s => new Date(s.created_at) < sixtyDaysAgo)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 6);
+      return oldSongs.length > 0 ? oldSongs : songs.slice(-6).reverse();
+    }
+    return null;
+  })();
 
   const handlePlayAlbum = (albumTitle: string, artistName: string) => {
     const albumSongs = songs?.filter(
@@ -149,6 +169,62 @@ const Home = () => {
               <p className="text-xs md:text-sm">Start listening to build your history!</p>
             </div>
           )}
+        </section>
+      )}
+
+      {/* Your Recent Mix */}
+      {user && recentMix && recentMix.length > 0 && (
+        <section className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className={`font-bold flex items-center gap-2 ${isMobile ? 'text-lg' : 'text-2xl'}`}>
+              <Shuffle className="w-5 h-5 text-primary" />
+              Your Recent Mix
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={isMobile ? 'text-xs px-2' : ''}
+              onClick={() => {
+                if (recentMix.length > 0) playSong(recentMix[0], recentMix);
+              }}
+            >
+              Play all
+              <Play className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
+            {recentMix.map((song) => (
+              <SongCard key={`mix-${song.id}`} song={song} showAlbum compact />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Your Throwbacks */}
+      {throwbacks && throwbacks.length > 0 && (
+        <section className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className={`font-bold flex items-center gap-2 ${isMobile ? 'text-lg' : 'text-2xl'}`}>
+              <Rewind className="w-5 h-5 text-primary" />
+              Your Throwbacks
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={isMobile ? 'text-xs px-2' : ''}
+              onClick={() => {
+                if (throwbacks.length > 0) playSong(throwbacks[0], throwbacks);
+              }}
+            >
+              Play all
+              <Play className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
+            {throwbacks.map((song) => (
+              <SongCard key={`throwback-${song.id}`} song={song} showAlbum compact />
+            ))}
+          </div>
         </section>
       )}
 
