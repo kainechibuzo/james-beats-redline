@@ -29,6 +29,7 @@ import YearlyRecap from "./pages/YearlyRecap";
 import Admin from "./pages/Admin";
 import Welcome from "./pages/Welcome";
 import Settings from "./pages/Settings";
+import Explore from "./pages/Explore";
 
 const queryClient = new QueryClient();
 
@@ -113,6 +114,7 @@ const App = () => {
                     <Route path="/recap" element={<YearlyRecap />} />
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/explore" element={<Explore />} />
                   </Route>
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
