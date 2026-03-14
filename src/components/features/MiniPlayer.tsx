@@ -10,7 +10,7 @@ const MiniPlayer = () => {
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout;
+    let scrollTimeout: ReturnType<typeof setTimeout>;
 
     const handleScroll = () => {
       if (!currentSong || isDismissed) return;

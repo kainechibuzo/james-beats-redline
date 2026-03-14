@@ -46,7 +46,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   // Two audio elements for crossfade
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const nextAudioRef = useRef<HTMLAudioElement | null>(null);
-  const crossfadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const crossfadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Audio analyzer for visualizer
   const audioContextRef = useRef<AudioContext | null>(null);

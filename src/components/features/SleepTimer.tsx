@@ -18,7 +18,7 @@ const SleepTimer = () => {
   const [remainingTime, setRemainingTime] = useState<number>(0);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (remainingTime > 0) {
       interval = setInterval(() => {
         setRemainingTime((prev) => {
