@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Skeleton } from "@/components/ui/skeleton";
 import SongCard from "@/components/home/SongCard";
 import { MOODS } from "@/hooks/useDiscovery";
+import MadeForYou from "@/components/explore/MadeForYou";
 
 const GENRE_COLORS: Record<string, string> = {
   "Pop": "from-pink-600 to-rose-500",
