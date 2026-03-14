@@ -243,8 +243,8 @@ const Home = () => {
             onClick={() => { if (throwbacks.length > 0) playSong(throwbacks[0], throwbacks); }}
             className="group w-full rounded-xl overflow-hidden mb-4 relative h-32 md:h-40 hover:scale-[1.01] transition-transform"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-600 via-orange-500 to-rose-600" />
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800" />
+            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors" />
             <div className="relative h-full flex items-center justify-between px-5 md:px-8">
               <div className="text-left">
                 <p className="text-white/70 text-xs uppercase tracking-wider font-medium">Nostalgia</p>
