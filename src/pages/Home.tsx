@@ -192,6 +192,24 @@ const Home = () => {
               <Play className="w-4 h-4 ml-1" />
             </Button>
           </div>
+          {/* Gradient playlist cover */}
+          <button
+            onClick={() => { if (recentMix.length > 0) playSong(recentMix[0], recentMix); }}
+            className="group w-full rounded-xl overflow-hidden mb-4 relative h-32 md:h-40 hover:scale-[1.01] transition-transform"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-600 via-blue-500 to-violet-600" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+            <div className="relative h-full flex items-center justify-between px-5 md:px-8">
+              <div className="text-left">
+                <p className="text-white/70 text-xs uppercase tracking-wider font-medium">Personalized</p>
+                <p className="text-white font-bold text-xl md:text-2xl mt-1 drop-shadow-md">Your Recent Mix</p>
+                <p className="text-white/60 text-xs md:text-sm mt-1">{recentMix.length} tracks • Based on your listening</p>
+              </div>
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Play className="w-6 h-6 md:w-7 md:h-7 text-white ml-0.5" />
+              </div>
+            </div>
+          </button>
           <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {recentMix.map((song) => (
               <SongCard key={`mix-${song.id}`} song={song} showAlbum compact />
@@ -220,6 +238,24 @@ const Home = () => {
               <Play className="w-4 h-4 ml-1" />
             </Button>
           </div>
+          {/* Gradient playlist cover */}
+          <button
+            onClick={() => { if (throwbacks.length > 0) playSong(throwbacks[0], throwbacks); }}
+            className="group w-full rounded-xl overflow-hidden mb-4 relative h-32 md:h-40 hover:scale-[1.01] transition-transform"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-600 via-orange-500 to-rose-600" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+            <div className="relative h-full flex items-center justify-between px-5 md:px-8">
+              <div className="text-left">
+                <p className="text-white/70 text-xs uppercase tracking-wider font-medium">Nostalgia</p>
+                <p className="text-white font-bold text-xl md:text-2xl mt-1 drop-shadow-md">Your Throwbacks</p>
+                <p className="text-white/60 text-xs md:text-sm mt-1">{throwbacks.length} tracks • Rediscover old favorites</p>
+              </div>
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Play className="w-6 h-6 md:w-7 md:h-7 text-white ml-0.5" />
+              </div>
+            </div>
+          </button>
           <div className={`grid gap-2 md:gap-4 ${isMobile ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'}`}>
             {throwbacks.map((song) => (
               <SongCard key={`throwback-${song.id}`} song={song} showAlbum compact />
