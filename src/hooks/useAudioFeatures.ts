@@ -66,7 +66,7 @@ export const useEqualizer = () => {
 export const useSleepTimer = () => {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [remaining, setRemaining] = useState<number>(0);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const onEndRef = useRef<() => void>();
 
   const start = useCallback((minutes: number, onEnd: () => void) => {
