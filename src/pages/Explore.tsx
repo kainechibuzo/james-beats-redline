@@ -86,6 +86,9 @@ const Explore = () => {
         </div>
       </section>
 
+      {/* Made for You */}
+      <MadeForYou />
+
       {/* Browse by Genre */}
       <section className="mb-8">
         <h2 className={`font-bold mb-4 flex items-center gap-2 ${isMobile ? 'text-lg' : 'text-xl'}`}>
