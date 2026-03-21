@@ -30,6 +30,9 @@ import Admin from "./pages/Admin";
 import Welcome from "./pages/Welcome";
 import Settings from "./pages/Settings";
 import Explore from "./pages/Explore";
+import Radio from "./pages/Radio";
+import Podcasts from "./pages/Podcasts";
+import Live from "./pages/Live";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +118,9 @@ const App = () => {
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/explore" element={<Explore />} />
+                    <Route path="/radio" element={<Radio />} />
+                    <Route path="/podcasts" element={<Podcasts />} />
+                    <Route path="/live" element={<Live />} />
                   </Route>
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
