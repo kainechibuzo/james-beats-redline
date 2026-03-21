@@ -30,6 +30,9 @@ import Admin from "./pages/Admin";
 import Welcome from "./pages/Welcome";
 import Settings from "./pages/Settings";
 import Explore from "./pages/Explore";
+import Radio from "./pages/Radio";
+import Podcasts from "./pages/Podcasts";
+import Live from "./pages/Live";
 
 const queryClient = new QueryClient();
 
