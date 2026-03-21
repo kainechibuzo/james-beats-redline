@@ -43,7 +43,7 @@ const BottomNav = () => {
     { to: user ? "/profile" : "/auth", icon: User, label: user ? "Profile" : "Login" },
   ];
 
-  const filteredItems = navItems.filter(item => !item.requiresAuth || user);
+  const filteredItems = navItems;
 
   if (!isVisible) {
     return (
