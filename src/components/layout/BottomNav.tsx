@@ -35,9 +35,11 @@ const BottomNav = () => {
   const navItems = [
     { to: "/home", icon: Home, label: "Home" },
     { to: "/explore", icon: Compass, label: "Explore" },
+    { to: "/radio", icon: Radio, label: "Radio" },
+    { to: "/podcasts", icon: Mic, label: "Podcasts" },
+    { to: "/live", icon: Tv, label: "Live" },
     { to: "/search", icon: Search, label: "Search" },
     { to: "/library", icon: Library, label: "Library" },
-    { to: "/upload", icon: Upload, label: "Upload", requiresAuth: true },
     { to: user ? "/profile" : "/auth", icon: User, label: user ? "Profile" : "Login" },
   ];
 

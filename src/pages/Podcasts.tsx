@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mic, Play, Pause, Clock, Users, Headphones } from "lucide-react";
-import { formatDuration } from "@/lib/formatUtils";
+import { formatDuration } from "@/lib/utils";
 
 const CATEGORIES = ["All", "Music", "Talk", "Culture", "Tech", "Sports", "News", "Comedy"];
 
