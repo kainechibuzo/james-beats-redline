@@ -322,6 +322,51 @@ export type Database = {
           },
         ]
       }
+      live_streams: {
+        Row: {
+          category: string
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          host_name: string | null
+          id: string
+          is_live: boolean
+          scheduled_at: string | null
+          stream_url: string
+          title: string
+          viewer_count: number
+        }
+        Insert: {
+          category?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          host_name?: string | null
+          id?: string
+          is_live?: boolean
+          scheduled_at?: string | null
+          stream_url: string
+          title: string
+          viewer_count?: number
+        }
+        Update: {
+          category?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          host_name?: string | null
+          id?: string
+          is_live?: boolean
+          scheduled_at?: string | null
+          stream_url?: string
+          title?: string
+          viewer_count?: number
+        }
+        Relationships: []
+      }
       lyrics: {
         Row: {
           behind_the_lyrics: string | null
@@ -464,6 +509,86 @@ export type Database = {
         }
         Relationships: []
       }
+      podcast_episodes: {
+        Row: {
+          audio_url: string
+          description: string | null
+          duration: number | null
+          id: string
+          play_count: number
+          podcast_id: string
+          published_at: string
+          title: string
+        }
+        Insert: {
+          audio_url: string
+          description?: string | null
+          duration?: number | null
+          id?: string
+          play_count?: number
+          podcast_id: string
+          published_at?: string
+          title: string
+        }
+        Update: {
+          audio_url?: string
+          description?: string | null
+          duration?: number | null
+          id?: string
+          play_count?: number
+          podcast_id?: string
+          published_at?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_episodes_podcast_id_fkey"
+            columns: ["podcast_id"]
+            isOneToOne: false
+            referencedRelation: "podcasts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcasts: {
+        Row: {
+          category: string | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          host: string | null
+          id: string
+          is_featured: boolean
+          rss_url: string | null
+          subscriber_count: number
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          host?: string | null
+          id?: string
+          is_featured?: boolean
+          rss_url?: string | null
+          subscriber_count?: number
+          title: string
+        }
+        Update: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          host?: string | null
+          id?: string
+          is_featured?: boolean
+          rss_url?: string | null
+          subscriber_count?: number
+          title?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -512,6 +637,45 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      radio_stations: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          genre: string | null
+          id: string
+          is_live: boolean
+          listener_count: number
+          name: string
+          stream_url: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_live?: boolean
+          listener_count?: number
+          name: string
+          stream_url: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          genre?: string | null
+          id?: string
+          is_live?: boolean
+          listener_count?: number
+          name?: string
+          stream_url?: string
         }
         Relationships: []
       }
