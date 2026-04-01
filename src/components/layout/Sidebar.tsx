@@ -85,7 +85,7 @@ const Sidebar = () => {
         {isOpen && <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)} />}
 
         {/* Mobile Sidebar */}
-        <aside className={cn("fixed top-0 left-0 w-64 bg-sidebar h-screen flex flex-col border-r border-sidebar-border z-50 transition-transform duration-300", isOpen ? "translate-x-0" : "-translate-x-full")}>
+        <aside className={cn("fixed top-0 left-0 w-64 bg-sidebar h-screen min-h-0 overflow-hidden flex flex-col border-r border-sidebar-border z-50 transition-transform duration-300", isOpen ? "translate-x-0" : "-translate-x-full")}>
           <div className="p-4 pt-16 flex items-center justify-between">
             <h1 className="text-xl font-bold text-primary flex items-center gap-2">
               <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center">
@@ -96,7 +96,7 @@ const Sidebar = () => {
             <ThemeToggle />
           </div>
 
-          <ScrollArea className="flex-1 px-2">
+          <ScrollArea className="min-h-0 flex-1 px-2">
             <nav className="pb-4">
               <div className="space-y-1">
                 {navItems.map(item => {
@@ -147,7 +147,7 @@ const Sidebar = () => {
       </>;
   }
 
-  return <aside className="w-72 bg-sidebar h-screen flex flex-col border-r border-sidebar-border">
+  return <aside className="w-72 bg-sidebar h-screen min-h-0 overflow-hidden flex flex-col border-r border-sidebar-border">
       <div className="p-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
@@ -158,7 +158,7 @@ const Sidebar = () => {
         <ThemeToggle />
       </div>
 
-      <ScrollArea className="flex-1 px-4">
+      <ScrollArea className="min-h-0 flex-1 px-4">
         <nav className="pb-6">
           <div className="space-y-1">
             {navItems.map(item => {
