@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 import { UpgradeButton } from "@/components/subscription/PremiumFeatureGate";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -95,32 +96,34 @@ const Sidebar = () => {
             <ThemeToggle />
           </div>
 
-          <nav className="flex-1 px-2">
-            <div className="space-y-1">
-              {navItems.map(item => {
-              const isActive = location.pathname === item.path || (item.path === "/home" && location.pathname === "/");
-              return <Link key={item.path} to={item.path} onClick={handleNavClick} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </Link>;
-            })}
-            </div>
-
-            <div className="mt-6">
-              <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase mb-2">
-                Your Collection
-              </h3>
+          <ScrollArea className="flex-1 px-2">
+            <nav className="pb-4">
               <div className="space-y-1">
-                {libraryItems.map(item => {
-                const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} onClick={handleNavClick} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+                {navItems.map(item => {
+                const isActive = location.pathname === item.path || (item.path === "/home" && location.pathname === "/");
+                return <Link key={item.path} to={item.path} onClick={handleNavClick} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.label}</span>
                     </Link>;
               })}
               </div>
-            </div>
-          </nav>
+
+              <div className="mt-6">
+                <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase mb-2">
+                  Your Collection
+                </h3>
+                <div className="space-y-1">
+                  {libraryItems.map(item => {
+                  const isActive = location.pathname === item.path;
+                  return <Link key={item.path} to={item.path} onClick={handleNavClick} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </Link>;
+                })}
+                </div>
+              </div>
+            </nav>
+          </ScrollArea>
 
           <div className="p-3 border-t border-sidebar-border space-y-2">
             <UpgradeButton className="w-full text-sm" />
@@ -155,32 +158,34 @@ const Sidebar = () => {
         <ThemeToggle />
       </div>
 
-      <nav className="flex-1 px-4">
-        <div className="space-y-1">
-          {navItems.map(item => {
-          const isActive = location.pathname === item.path || (item.path === "/home" && location.pathname === "/");
-          return <Link key={item.path} to={item.path} className={cn("flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all duration-200", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
-                <item.icon className="w-6 h-6" />
-                <span className="text-base">{item.label}</span>
-              </Link>;
-        })}
-        </div>
-
-        <div className="mt-10">
-          <h3 className="px-4 text-sm font-semibold text-muted-foreground uppercase mb-3">
-            Your Collection
-          </h3>
+      <ScrollArea className="flex-1 px-4">
+        <nav className="pb-6">
           <div className="space-y-1">
-            {libraryItems.map(item => {
-            const isActive = location.pathname === item.path;
-            return <Link key={item.path} to={item.path} className={cn("flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
+            {navItems.map(item => {
+            const isActive = location.pathname === item.path || (item.path === "/home" && location.pathname === "/");
+            return <Link key={item.path} to={item.path} className={cn("flex items-center gap-4 px-4 py-3.5 rounded-lg transition-all duration-200", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+                  <item.icon className="w-6 h-6" />
+                  <span className="text-base">{item.label}</span>
                 </Link>;
           })}
           </div>
-        </div>
-      </nav>
+
+          <div className="mt-10">
+            <h3 className="px-4 text-sm font-semibold text-muted-foreground uppercase mb-3">
+              Your Collection
+            </h3>
+            <div className="space-y-1">
+              {libraryItems.map(item => {
+              const isActive = location.pathname === item.path;
+              return <Link key={item.path} to={item.path} className={cn("flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200", isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </Link>;
+            })}
+            </div>
+          </div>
+        </nav>
+      </ScrollArea>
 
       <div className="p-5 border-t border-sidebar-border space-y-3 py-[60px]">
         <UpgradeButton className="w-full" />
