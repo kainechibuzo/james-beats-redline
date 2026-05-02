@@ -4,8 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mic, Play, Pause, Clock, Users, Headphones } from "lucide-react";
+import { Mic, Play, Pause, Clock, Users, Headphones, Plus, Check, Rss } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+import { useFollowedPodcasts, useTogglePodcastFollow, useFollowedPodcastFeed } from "@/hooks/usePodcastFollows";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const CATEGORIES = ["All", "Music", "Talk", "Culture", "Tech", "Sports", "News", "Comedy"];
 
@@ -14,6 +17,10 @@ const Podcasts = () => {
   const [expandedPodcast, setExpandedPodcast] = useState<string | null>(null);
   const [playingEpisode, setPlayingEpisode] = useState<string | null>(null);
   const [audio] = useState(() => new Audio());
+  const { user } = useAuth();
+  const { data: followedSet } = useFollowedPodcasts();
+  const { data: feed } = useFollowedPodcastFeed();
+  const toggleFollow = useTogglePodcastFollow();
 
   const { data: podcasts, isLoading } = useQuery({
     queryKey: ["podcasts"],
