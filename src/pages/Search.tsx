@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search as SearchIcon, Music, Users, Clock, X, Disc } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,12 @@ import { useSongs } from "@/hooks/useSongs";
 import { useAlbums } from "@/hooks/useAlbums";
 import SongCard from "@/components/home/SongCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useSearchHistory,
+  useAddSearchHistory,
+  useRemoveSearchHistory,
+  useClearSearchHistory,
+} from "@/hooks/useSearchHistory";
 
 const GENRES = [
   { title: "Pop", color: "bg-pink-500" },
@@ -22,36 +28,12 @@ const GENRES = [
 
 const Search = () => {
   const [query, setQuery] = useState("");
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const { data: songs, isLoading } = useSongs();
   const { data: albums } = useAlbums();
-
-  // Load search history from localStorage
-  useEffect(() => {
-    const history = localStorage.getItem("searchHistory");
-    if (history) {
-      setSearchHistory(JSON.parse(history));
-    }
-  }, []);
-
-  // Save search to history
-  const addToHistory = (term: string) => {
-    if (!term.trim()) return;
-    const newHistory = [term, ...searchHistory.filter(h => h !== term)].slice(0, 10);
-    setSearchHistory(newHistory);
-    localStorage.setItem("searchHistory", JSON.stringify(newHistory));
-  };
-
-  const removeFromHistory = (term: string) => {
-    const newHistory = searchHistory.filter(h => h !== term);
-    setSearchHistory(newHistory);
-    localStorage.setItem("searchHistory", JSON.stringify(newHistory));
-  };
-
-  const clearHistory = () => {
-    setSearchHistory([]);
-    localStorage.removeItem("searchHistory");
-  };
+  const { data: searchHistory = [] } = useSearchHistory();
+  const addHistory = useAddSearchHistory();
+  const removeHistory = useRemoveSearchHistory();
+  const clearHistoryMut = useClearSearchHistory();
 
   // Filter songs
   const filteredSongs = songs?.filter(
@@ -77,12 +59,11 @@ const Search = () => {
   );
 
   const searchResults = query.length > 0 ? filteredSongs : [];
-  const hasResults = (searchResults?.length || 0) > 0 || artists.length > 0 || (filteredAlbums?.length || 0) > 0;
 
   const handleSearch = (term: string) => {
     setQuery(term);
     if (term.trim()) {
-      addToHistory(term);
+      addHistory.mutate(term.trim());
     }
   };
 
