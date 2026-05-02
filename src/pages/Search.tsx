@@ -187,21 +187,22 @@ const Search = () => {
                   <Clock className="w-4 h-4" />
                   Recent Searches
                 </h2>
-                <Button variant="ghost" size="sm" onClick={clearHistory}>
+                <Button variant="ghost" size="sm" onClick={() => clearHistoryMut.mutate()}>
                   Clear all
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {searchHistory.map((term, index) => (
+                {searchHistory.map((entry) => (
                   <Badge
+                    key={entry.id}
                     variant="secondary"
                     className="cursor-pointer hover:bg-primary/20 gap-1 pr-1"
                   >
-                    <span onClick={() => setQuery(term)}>{term}</span>
+                    <span onClick={() => handleSearch(entry.query)}>{entry.query}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeFromHistory(term);
+                        removeHistory.mutate(entry.id);
                       }}
                       className="ml-1 hover:text-destructive"
                     >
