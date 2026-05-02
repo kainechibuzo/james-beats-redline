@@ -119,6 +119,27 @@ export type Database = {
         }
         Relationships: []
       }
+      followed_podcasts: {
+        Row: {
+          created_at: string
+          id: string
+          podcast_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          podcast_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          podcast_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       followers: {
         Row: {
           created_at: string
@@ -260,6 +281,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      liked_radio_stations: {
+        Row: {
+          created_at: string
+          id: string
+          station_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          station_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          station_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       liked_songs: {
         Row: {
@@ -437,6 +479,30 @@ export type Database = {
           },
         ]
       }
+      playlist_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       playlist_songs: {
         Row: {
           added_at: string
@@ -481,6 +547,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           description: string | null
+          folder_id: string | null
           id: string
           is_public: boolean
           name: string
@@ -491,6 +558,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          folder_id?: string | null
           id?: string
           is_public?: boolean
           name: string
@@ -501,6 +569,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          folder_id?: string | null
           id?: string
           is_public?: boolean
           name?: string
@@ -648,6 +717,7 @@ export type Database = {
           description: string | null
           genre: string | null
           id: string
+          is_featured: boolean
           is_live: boolean
           listener_count: number
           name: string
@@ -660,6 +730,7 @@ export type Database = {
           description?: string | null
           genre?: string | null
           id?: string
+          is_featured?: boolean
           is_live?: boolean
           listener_count?: number
           name: string
@@ -672,6 +743,7 @@ export type Database = {
           description?: string | null
           genre?: string | null
           id?: string
+          is_featured?: boolean
           is_live?: boolean
           listener_count?: number
           name?: string
@@ -707,6 +779,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      search_history: {
+        Row: {
+          created_at: string
+          id: string
+          query: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          query: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          query?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       site_analytics: {
         Row: {
