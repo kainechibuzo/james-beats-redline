@@ -4,7 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Radio as RadioIcon, Play, Pause, Signal, Users, Music } from "lucide-react";
+import { Radio as RadioIcon, Play, Pause, Signal, Users, Music, Heart } from "lucide-react";
+import { useLikedRadioStations, useToggleRadioLike } from "@/hooks/useRadioLikes";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const GENRE_FILTERS = ["All", "Hip Hop", "R&B", "Afrobeats", "Pop", "Jazz", "Gospel", "Talk"];
 
@@ -13,6 +17,9 @@ const Radio = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [audio] = useState(() => new Audio());
+  const { user } = useAuth();
+  const { data: likedSet } = useLikedRadioStations();
+  const toggleLike = useToggleRadioLike();
 
   const { data: stations, isLoading } = useQuery({
     queryKey: ["radio-stations"],
