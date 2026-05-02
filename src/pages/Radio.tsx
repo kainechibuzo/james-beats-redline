@@ -4,7 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Radio as RadioIcon, Play, Pause, Signal, Users, Music } from "lucide-react";
+import { Radio as RadioIcon, Play, Pause, Signal, Users, Music, Heart } from "lucide-react";
+import { useLikedRadioStations, useToggleRadioLike } from "@/hooks/useRadioLikes";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const GENRE_FILTERS = ["All", "Hip Hop", "R&B", "Afrobeats", "Pop", "Jazz", "Gospel", "Talk"];
 
@@ -13,6 +17,9 @@ const Radio = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [audio] = useState(() => new Audio());
+  const { user } = useAuth();
+  const { data: likedSet } = useLikedRadioStations();
+  const toggleLike = useToggleRadioLike();
 
   const { data: stations, isLoading } = useQuery({
     queryKey: ["radio-stations"],
@@ -106,11 +113,30 @@ const Radio = () => {
                   <p className="text-sm text-muted-foreground truncate">{station.description}</p>
                   <div className="flex items-center gap-3 mt-1">
                     {station.genre && <Badge variant="secondary" className="text-xs">{station.genre}</Badge>}
+                    {station.is_featured && (
+                      <Badge variant="default" className="text-xs">Featured</Badge>
+                    )}
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Users className="w-3 h-3" /> {station.listener_count}
                     </span>
                   </div>
                 </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!user) {
+                      toast.error("Sign in to like stations");
+                      return;
+                    }
+                    toggleLike.mutate({ stationId: station.id, isLiked: !!likedSet?.has(station.id) });
+                  }}
+                  aria-label="Like station"
+                >
+                  <Heart className={cn("w-5 h-5", likedSet?.has(station.id) && "fill-red-500 text-red-500")} />
+                </Button>
                 <Button size="icon" variant="ghost" className="flex-shrink-0">
                   {activeStation === station.id && isPlaying ? (
                     <Pause className="w-5 h-5" />

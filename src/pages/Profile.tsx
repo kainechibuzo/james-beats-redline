@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
 import { useLikedSongs, useRecentlyPlayed } from "@/hooks/useSongs";
+import { useListeningStreak } from "@/hooks/useListeningStreak";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ const Profile = () => {
   const { data: likedSongs } = useLikedSongs();
   const { data: recentlyPlayed } = useRecentlyPlayed();
   const { data: playlists } = usePlaylists();
+  const { data: streak } = useListeningStreak();
   const updateProfile = useUpdateProfile();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -391,16 +393,19 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Listening Streak */}
+              {/* Listening Streak (real, computed from recently_played) */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium">Listening Streak</p>
                   <Badge variant="outline" className="gap-1">
                     <Sparkles className="w-3 h-3" />
-                    {recentlyPlayed?.length ? Math.min(recentlyPlayed.length, 7) : 0} days
+                    {streak?.current ?? 0} day{(streak?.current ?? 0) === 1 ? "" : "s"}
                   </Badge>
                 </div>
-                <Progress value={Math.min((recentlyPlayed?.length || 0) * 10, 100)} className="h-2" />
+                <Progress value={Math.min(((streak?.current ?? 0) / Math.max(streak?.longest ?? 7, 7)) * 100, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Longest: {streak?.longest ?? 0} days
+                </p>
               </div>
 
               {/* Member Since */}

@@ -28,6 +28,7 @@ interface PlayerContextType {
   previous: () => void;
   addToQueue: (song: Song) => void;
   removeFromQueue: (songId: string) => void;
+  reorderQueue: (newQueue: Song[]) => void;
   clearQueue: () => void;
   setQueue: (songs: Song[], playlistName?: string) => void;
   toggleShuffle: () => void;
@@ -515,6 +516,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setQueueState(prev => prev.filter(s => s.id !== songId));
   }, []);
 
+  const reorderQueue = useCallback((newQueue: Song[]) => {
+    const currentId = currentSong?.id;
+    setQueueState(newQueue);
+    if (currentId) {
+      const newIdx = newQueue.findIndex(s => s.id === currentId);
+      if (newIdx !== -1) setQueueIndex(newIdx);
+    }
+  }, [currentSong?.id]);
+
   const clearQueue = useCallback(() => {
     setQueueState([]);
     setQueueIndex(-1);
@@ -614,6 +624,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         previous,
         addToQueue,
         removeFromQueue,
+        reorderQueue,
         clearQueue,
         setQueue,
         toggleShuffle,

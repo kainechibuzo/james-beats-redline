@@ -4,8 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mic, Play, Pause, Clock, Users, Headphones } from "lucide-react";
+import { Mic, Play, Pause, Clock, Users, Headphones, Plus, Check, Rss } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
+import { useFollowedPodcasts, useTogglePodcastFollow, useFollowedPodcastFeed } from "@/hooks/usePodcastFollows";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const CATEGORIES = ["All", "Music", "Talk", "Culture", "Tech", "Sports", "News", "Comedy"];
 
@@ -14,6 +17,10 @@ const Podcasts = () => {
   const [expandedPodcast, setExpandedPodcast] = useState<string | null>(null);
   const [playingEpisode, setPlayingEpisode] = useState<string | null>(null);
   const [audio] = useState(() => new Audio());
+  const { user } = useAuth();
+  const { data: followedSet } = useFollowedPodcasts();
+  const { data: feed } = useFollowedPodcastFeed();
+  const toggleFollow = useTogglePodcastFollow();
 
   const { data: podcasts, isLoading } = useQuery({
     queryKey: ["podcasts"],
@@ -83,6 +90,26 @@ const Podcasts = () => {
         ))}
       </div>
 
+      {feed && feed.length > 0 && (
+        <Card>
+          <CardContent className="p-4 space-y-2">
+            <h3 className="font-semibold flex items-center gap-2 mb-2">
+              <Rss className="w-4 h-4 text-purple-500" /> Your Feed
+            </h3>
+            {feed.slice(0, 5).map((ep: any) => (
+              <div key={ep.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                <Button size="icon" variant="ghost" onClick={() => handlePlayEpisode(ep)}>
+                  {playingEpisode === ep.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </Button>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{ep.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{ep.podcast?.title}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
@@ -111,7 +138,7 @@ const Podcasts = () => {
                         <Mic className="w-8 h-8 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-semibold truncate">{podcast.title}</h3>
                       {podcast.host && <p className="text-sm text-muted-foreground">by {podcast.host}</p>}
                       <div className="flex items-center gap-2 mt-2">
@@ -120,6 +147,22 @@ const Podcasts = () => {
                           <Users className="w-3 h-3" /> {podcast.subscriber_count}
                         </span>
                       </div>
+                      <Button
+                        size="sm"
+                        variant={followedSet?.has(podcast.id) ? "secondary" : "default"}
+                        className="mt-3 h-7 gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!user) {
+                            toast.error("Sign in to follow podcasts");
+                            return;
+                          }
+                          toggleFollow.mutate({ podcastId: podcast.id, isFollowed: !!followedSet?.has(podcast.id) });
+                        }}
+                      >
+                        {followedSet?.has(podcast.id) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                        {followedSet?.has(podcast.id) ? "Following" : "Follow"}
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
