@@ -118,7 +118,7 @@ const Podcasts = () => {
                         <Mic className="w-8 h-8 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-semibold truncate">{podcast.title}</h3>
                       {podcast.host && <p className="text-sm text-muted-foreground">by {podcast.host}</p>}
                       <div className="flex items-center gap-2 mt-2">
@@ -127,6 +127,22 @@ const Podcasts = () => {
                           <Users className="w-3 h-3" /> {podcast.subscriber_count}
                         </span>
                       </div>
+                      <Button
+                        size="sm"
+                        variant={followedSet?.has(podcast.id) ? "secondary" : "default"}
+                        className="mt-3 h-7 gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!user) {
+                            toast.error("Sign in to follow podcasts");
+                            return;
+                          }
+                          toggleFollow.mutate({ podcastId: podcast.id, isFollowed: !!followedSet?.has(podcast.id) });
+                        }}
+                      >
+                        {followedSet?.has(podcast.id) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                        {followedSet?.has(podcast.id) ? "Following" : "Follow"}
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
