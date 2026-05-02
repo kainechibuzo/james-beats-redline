@@ -193,22 +193,23 @@ const Search = () => {
               </div>
               <div className="flex flex-wrap gap-2">
                 {searchHistory.map((entry) => (
-                  <Badge
-                    key={entry.id}
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-primary/20 gap-1 pr-1"
-                  >
-                    <span onClick={() => handleSearch(entry.query)}>{entry.query}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeHistory.mutate(entry.id);
-                      }}
-                      className="ml-1 hover:text-destructive"
+                  <div key={entry.id}>
+                    <Badge
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-primary/20 gap-1 pr-1"
                     >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
+                      <span onClick={() => handleSearch(entry.query)}>{entry.query}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeHistory.mutate(entry.id);
+                        }}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  </div>
                 ))}
               </div>
             </section>
