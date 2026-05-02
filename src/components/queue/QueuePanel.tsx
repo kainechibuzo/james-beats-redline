@@ -70,7 +70,7 @@ const SortableQueueItem: React.FC<{
 };
 
 const QueuePanel = ({ trigger }: QueuePanelProps) => {
-  const { queue, currentSong, play, clearQueue, removeFromQueue } = usePlayer();
+  const { queue, currentSong, play, clearQueue, removeFromQueue, reorderQueue } = usePlayer();
   const [localQueue, setLocalQueue] = React.useState(queue);
 
   React.useEffect(() => {
@@ -98,6 +98,7 @@ const QueuePanel = ({ trigger }: QueuePanelProps) => {
       if (oldIndex !== -1 && newIndex !== -1) {
         const newQueue = arrayMove(localQueue, oldIndex, newIndex);
         setLocalQueue(newQueue);
+        reorderQueue(newQueue);
       }
     }
   };
