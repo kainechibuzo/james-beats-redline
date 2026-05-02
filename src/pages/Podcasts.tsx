@@ -90,7 +90,27 @@ const Podcasts = () => {
         ))}
       </div>
 
-      {isLoading ? (
+      {feed && feed.length > 0 && (
+        <Card>
+          <CardContent className="p-4 space-y-2">
+            <h3 className="font-semibold flex items-center gap-2 mb-2">
+              <Rss className="w-4 h-4 text-purple-500" /> Your Feed
+            </h3>
+            {feed.slice(0, 5).map((ep: any) => (
+              <div key={ep.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50">
+                <Button size="icon" variant="ghost" onClick={() => handlePlayEpisode(ep)}>
+                  {playingEpisode === ep.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </Button>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{ep.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{ep.podcast?.title}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse bg-card">
