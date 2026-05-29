@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS songs_youtube_video_id_key ON public.songs (youtube_video_id) WHERE youtube_video_id IS NOT NULL;
