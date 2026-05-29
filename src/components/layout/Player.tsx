@@ -135,23 +135,16 @@ const Player = () => {
         >
           {currentSong ? (
             <>
-              <div className="relative w-14 h-14 bg-muted rounded-md overflow-hidden flex-shrink-0 group-hover:ring-2 group-hover:ring-primary transition-all">
-                {(currentSong.cover_url || currentSong.thumbnail) ? (
-                  <img
-                    src={currentSong.cover_url || currentSong.thumbnail || ""}
-                    alt={currentSong.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-primary/20">
-                    <span className="text-xs text-primary">♪</span>
-                  </div>
-                )}
+              <div
+                data-yt-anchor="cover"
+                className="relative w-14 h-14 bg-black rounded-md overflow-hidden flex-shrink-0 group-hover:ring-2 group-hover:ring-primary transition-all"
+              >
                 {/* Expand icon on hover */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                   <Maximize2 className="w-5 h-5 text-white" />
                 </div>
               </div>
+
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">{currentSong.title}</span>
                 <Link 
