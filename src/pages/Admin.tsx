@@ -887,6 +887,10 @@ const Admin = () => {
         <TabsContent value="payments">
           <PaymentSettings />
         </TabsContent>
+
+        <TabsContent value="mixes">
+          <MixManagement />
+        </TabsContent>
       </Tabs>
     </div>
   );
