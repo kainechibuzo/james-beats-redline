@@ -725,6 +725,10 @@ const Admin = () => {
             <CreditCard className="w-4 h-4" />
             Payments
           </TabsTrigger>
+          <TabsTrigger value="mixes" className="gap-2">
+            <Youtube className="w-4 h-4" />
+            Mixes
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
