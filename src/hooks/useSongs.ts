@@ -4,14 +4,18 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export interface Song {
   id: string;
-  user_id: string;
+  user_id: string | null;
   title: string;
   artist: string;
   album: string | null;
   genre: string | null;
   duration: number | null;
-  file_url: string;
+  file_url: string | null;
   cover_url: string | null;
+  thumbnail?: string | null;
+  youtube_video_id?: string | null;
+  youtube_url?: string | null;
+  source?: string | null;
   play_count: number;
   is_public: boolean;
   created_at: string;
