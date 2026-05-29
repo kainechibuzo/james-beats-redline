@@ -85,8 +85,8 @@ const Player = () => {
               {currentSong ? (
                 <>
                   <div className="w-10 h-10 bg-muted rounded overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-primary transition-all">
-                    {currentSong.cover_url ? (
-                      <img src={currentSong.cover_url} alt={currentSong.title} className="w-full h-full object-cover" />
+                    {(currentSong.cover_url || currentSong.thumbnail) ? (
+                      <img src={currentSong.cover_url || currentSong.thumbnail || ""} alt={currentSong.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-primary/20">
                         <span className="text-xs text-primary">♪</span>
