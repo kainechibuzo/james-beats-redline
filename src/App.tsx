@@ -33,6 +33,8 @@ import Explore from "./pages/Explore";
 import Radio from "./pages/Radio";
 import Podcasts from "./pages/Podcasts";
 import Live from "./pages/Live";
+import Mixes from "./pages/Mixes";
+import MixDetail from "./pages/MixDetail";
 
 const queryClient = new QueryClient();
 
@@ -121,6 +123,8 @@ const App = () => {
                     <Route path="/radio" element={<Radio />} />
                     <Route path="/podcasts" element={<Podcasts />} />
                     <Route path="/live" element={<Live />} />
+                    <Route path="/mixes" element={<Mixes />} />
+                    <Route path="/mixes/:id" element={<MixDetail />} />
                   </Route>
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
