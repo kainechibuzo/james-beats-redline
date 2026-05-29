@@ -27,11 +27,12 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Shield, Users, Music, Disc, Database, TrendingUp, 
   Calendar, BarChart3, HardDrive, AlertTriangle, Heart, 
-  ListMusic, Play, UserPlus, PieChart, CreditCard
+  ListMusic, Play, UserPlus, PieChart, CreditCard, Youtube
 } from "lucide-react";
 import AlbumManagement from "@/components/admin/AlbumManagement";
 import ArtistPromotion from "@/components/admin/ArtistPromotion";
 import PaymentSettings from "@/components/admin/PaymentSettings";
+import MixManagement from "@/components/admin/MixManagement";
 import {
   LineChart,
   Line,
