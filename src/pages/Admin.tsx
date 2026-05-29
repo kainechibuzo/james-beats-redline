@@ -33,6 +33,8 @@ import AlbumManagement from "@/components/admin/AlbumManagement";
 import ArtistPromotion from "@/components/admin/ArtistPromotion";
 import PaymentSettings from "@/components/admin/PaymentSettings";
 import MixManagement from "@/components/admin/MixManagement";
+import IngestionSources from "@/components/admin/IngestionSources";
+import { Rss } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -729,6 +731,10 @@ const Admin = () => {
             <Youtube className="w-4 h-4" />
             Mixes
           </TabsTrigger>
+          <TabsTrigger value="ingest" className="gap-2">
+            <Rss className="w-4 h-4" />
+            YouTube Sources
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -890,6 +896,10 @@ const Admin = () => {
 
         <TabsContent value="mixes">
           <MixManagement />
+        </TabsContent>
+
+        <TabsContent value="ingest">
+          <IngestionSources />
         </TabsContent>
       </Tabs>
     </div>
