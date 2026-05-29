@@ -8,6 +8,7 @@ import { useSongs } from "@/hooks/useSongs";
 import { useAlbums } from "@/hooks/useAlbums";
 import SongCard from "@/components/home/SongCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import YouTubeSearch from "@/components/search/YouTubeSearch";
 import {
   useSearchHistory,
   useAddSearchHistory,
@@ -176,7 +177,11 @@ const Search = () => {
               </div>
             )}
           </section>
+
+          {/* YouTube direct search */}
+          <YouTubeSearch query={query} />
         </div>
+
       ) : (
         <>
           {/* Search History */}
