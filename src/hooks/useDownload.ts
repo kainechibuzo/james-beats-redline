@@ -24,6 +24,7 @@ export const useDownload = () => {
     }));
 
     try {
+      if (!song.file_url) throw new Error("Song has no downloadable file");
       const response = await fetch(song.file_url);
       const reader = response.body?.getReader();
       const contentLength = Number(response.headers.get("content-length") || 0);
