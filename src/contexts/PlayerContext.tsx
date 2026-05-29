@@ -178,16 +178,20 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         host = document.createElement("div");
         host.id = YT_PLAYER_DIV_ID;
         host.style.position = "fixed";
-        host.style.left = "-9999px";
-        host.style.top = "0";
-        host.style.width = "1px";
-        host.style.height = "1px";
-        host.style.pointerEvents = "none";
+        host.style.bottom = "96px";
+        host.style.right = "12px";
+        host.style.width = "160px";
+        host.style.height = "90px";
+        host.style.zIndex = "60";
+        host.style.borderRadius = "8px";
+        host.style.overflow = "hidden";
+        host.style.boxShadow = "0 4px 16px rgba(0,0,0,0.5)";
+        host.style.border = "1px solid hsl(0 0% 20%)";
         document.body.appendChild(host);
       }
       playerRef.current = new YT.Player(YT_PLAYER_DIV_ID, {
-        height: "1",
-        width: "1",
+        height: "90",
+        width: "160",
         playerVars: { autoplay: 0, controls: 0, modestbranding: 1, playsinline: 1, rel: 0 },
         events: {
           onReady: () => {
