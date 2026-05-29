@@ -167,31 +167,30 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const handleSongEndRef = useRef(handleSongEnd);
   useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
 
-  // Init YouTube player
+  // Init YouTube player — full-width strip fixed above the play bar, hidden by default
   useEffect(() => {
     let cancelled = false;
     loadYouTubeApi().then((YT) => {
       if (cancelled) return;
-      // Ensure container exists
       let host = document.getElementById(YT_PLAYER_DIV_ID);
       if (!host) {
         host = document.createElement("div");
         host.id = YT_PLAYER_DIV_ID;
         host.style.position = "fixed";
-        host.style.bottom = "96px";
-        host.style.right = "12px";
-        host.style.width = "160px";
-        host.style.height = "90px";
-        host.style.zIndex = "60";
-        host.style.borderRadius = "8px";
+        host.style.left = "0";
+        host.style.right = "0";
+        host.style.width = "100%";
+        host.style.height = "68px";
+        host.style.zIndex = "40";
+        host.style.background = "hsl(0 0% 0%)";
+        host.style.borderTop = "1px solid hsl(0 0% 12%)";
         host.style.overflow = "hidden";
-        host.style.boxShadow = "0 4px 16px rgba(0,0,0,0.5)";
-        host.style.border = "1px solid hsl(0 0% 20%)";
+        host.style.display = "none";
         document.body.appendChild(host);
       }
       playerRef.current = new YT.Player(YT_PLAYER_DIV_ID, {
-        height: "90",
-        width: "160",
+        height: "68",
+        width: "100%",
         playerVars: { autoplay: 0, controls: 0, modestbranding: 1, playsinline: 1, rel: 0 },
         events: {
           onReady: () => {
@@ -212,6 +211,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Position the host above the play bar and toggle visibility based on playback
+  useEffect(() => {
+    const apply = () => {
+      const host = document.getElementById(YT_PLAYER_DIV_ID);
+      if (!host) return;
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      // Mobile: play bar (64) + bottom nav (~64). Desktop: play bar (96).
+      const offset = isMobile ? 64 + 64 : 96;
+      host.style.bottom = `${offset}px`;
+      host.style.display = currentSong && isPlaying ? "block" : "none";
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, [currentSong, isPlaying, playerReady]);
 
   // Poll time/duration
   useEffect(() => {
