@@ -84,15 +84,11 @@ const Player = () => {
             >
               {currentSong ? (
                 <>
-                  <div className="w-10 h-10 bg-muted rounded overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-primary transition-all">
-                    {(currentSong.cover_url || currentSong.thumbnail) ? (
-                      <img src={currentSong.cover_url || currentSong.thumbnail || ""} alt={currentSong.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-primary/20">
-                        <span className="text-xs text-primary">♪</span>
-                      </div>
-                    )}
-                  </div>
+                  <div
+                    data-yt-anchor="cover"
+                    className="w-10 h-10 bg-black rounded overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-primary transition-all"
+                  />
+
                   <div className="flex flex-col min-w-0">
                     <span className="text-xs font-medium truncate">{currentSong.title}</span>
                     <span className="text-[10px] text-muted-foreground truncate">
