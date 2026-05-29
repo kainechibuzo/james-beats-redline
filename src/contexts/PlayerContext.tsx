@@ -167,7 +167,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const handleSongEndRef = useRef(handleSongEnd);
   useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
 
-  // Init YouTube player — full-width strip fixed above the play bar, hidden by default
+  // Init YouTube player — overlays the album-cover slot inside the play bar
   useEffect(() => {
     let cancelled = false;
     loadYouTubeApi().then((YT) => {
@@ -177,19 +177,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         host = document.createElement("div");
         host.id = YT_PLAYER_DIV_ID;
         host.style.position = "fixed";
-        host.style.left = "0";
-        host.style.right = "0";
-        host.style.width = "100%";
-        host.style.height = "68px";
-        host.style.zIndex = "40";
+        host.style.zIndex = "55"; // above play bar (z-50) cover, below modals
         host.style.background = "hsl(0 0% 0%)";
-        host.style.borderTop = "1px solid hsl(0 0% 12%)";
+        host.style.borderRadius = "6px";
         host.style.overflow = "hidden";
+        host.style.pointerEvents = "none"; // let play-bar controls underneath stay clickable
         host.style.display = "none";
         document.body.appendChild(host);
       }
       playerRef.current = new YT.Player(YT_PLAYER_DIV_ID, {
-        height: "68",
+        height: "100%",
         width: "100%",
         playerVars: { autoplay: 0, controls: 0, modestbranding: 1, playsinline: 1, rel: 0 },
         events: {
@@ -212,21 +209,34 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Position the host above the play bar and toggle visibility based on playback
+  // Pin host onto whichever element has data-yt-anchor="cover" in the play bar.
+  // Re-position on resize, scroll, route change, and when current song toggles.
   useEffect(() => {
     const apply = () => {
       const host = document.getElementById(YT_PLAYER_DIV_ID);
       if (!host) return;
-      const isMobile = window.matchMedia("(max-width: 767px)").matches;
-      // Mobile: play bar (64) + bottom nav (~64). Desktop: play bar (96).
-      const offset = isMobile ? 64 + 64 : 96;
-      host.style.bottom = `${offset}px`;
-      host.style.display = currentSong && isPlaying ? "block" : "none";
+      const anchor = document.querySelector('[data-yt-anchor="cover"]') as HTMLElement | null;
+      if (!currentSong || !anchor) {
+        host.style.display = "none";
+        return;
+      }
+      const r = anchor.getBoundingClientRect();
+      host.style.display = "block";
+      host.style.top = `${r.top}px`;
+      host.style.left = `${r.left}px`;
+      host.style.width = `${r.width}px`;
+      host.style.height = `${r.height}px`;
     };
     apply();
+    const id = setInterval(apply, 400); // catches layout shifts cheaply
     window.addEventListener("resize", apply);
-    return () => window.removeEventListener("resize", apply);
-  }, [currentSong, isPlaying, playerReady]);
+    window.addEventListener("scroll", apply, true);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("scroll", apply, true);
+    };
+  }, [currentSong, playerReady]);
 
   // Poll time/duration
   useEffect(() => {
@@ -242,6 +252,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }, 500);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
+
 
   const playSongInternal = useCallback((song: Song) => {
     if (!song.youtube_video_id) {
