@@ -140,9 +140,9 @@ const Player = () => {
           {currentSong ? (
             <>
               <div className="relative w-14 h-14 bg-muted rounded-md overflow-hidden flex-shrink-0 group-hover:ring-2 group-hover:ring-primary transition-all">
-                {currentSong.cover_url ? (
+                {(currentSong.cover_url || currentSong.thumbnail) ? (
                   <img
-                    src={currentSong.cover_url}
+                    src={currentSong.cover_url || currentSong.thumbnail || ""}
                     alt={currentSong.title}
                     className="w-full h-full object-cover"
                   />
