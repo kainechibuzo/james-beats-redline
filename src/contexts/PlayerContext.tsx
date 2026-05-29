@@ -40,21 +40,37 @@ interface PlayerContextType {
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
+const YT_PLAYER_DIV_ID = "jb-yt-player";
+
+// Singleton YouTube IFrame API loader
+let ytApiPromise: Promise<any> | null = null;
+const loadYouTubeApi = (): Promise<any> => {
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    const w = window as any;
+    if (w.YT && w.YT.Player) return resolve(w.YT);
+    const prev = w.onYouTubeIframeAPIReady;
+    w.onYouTubeIframeAPIReady = () => {
+      prev?.();
+      resolve(w.YT);
+    };
+    if (!document.getElementById("yt-iframe-api")) {
+      const tag = document.createElement("script");
+      tag.id = "yt-iframe-api";
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(tag);
+    }
+  });
+  return ytApiPromise;
+};
+
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const trackPlay = useTrackPlay();
-  
-  // Two audio elements for crossfade
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
-  const crossfadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
-  // Audio analyzer for visualizer
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  
+
+  const playerRef = useRef<any>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -64,574 +80,252 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [queueIndex, setQueueIndex] = useState(-1);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<"off" | "one" | "all">("off");
-  const [crossfadeEnabled, setCrossfadeEnabledState] = useState(true);
-  const [crossfadeDuration, setCrossfadeDurationState] = useState(5); // seconds
-  const [gaplessEnabled, setGaplessEnabledState] = useState(true);
+  const [crossfadeEnabled, setCrossfadeEnabledState] = useState(false);
+  const [crossfadeDuration, setCrossfadeDurationState] = useState(5);
+  const [gaplessEnabled, setGaplessEnabledState] = useState(false);
   const [playingFrom, setPlayingFrom] = useState<"queue" | "playlist" | null>(null);
   const [playlistName, setPlaylistName] = useState<string | null>(null);
-  const [isCrossfading, setIsCrossfading] = useState(false);
-  const [frequencyData, setFrequencyData] = useState<Uint8Array>(new Uint8Array(64));
-  const [isPreloading, setIsPreloading] = useState(false);
+  const [frequencyData] = useState<Uint8Array>(new Uint8Array(64));
+  const [playerReady, setPlayerReady] = useState(false);
 
-  // Refs to avoid stale closures in handleSongEnd
+  // Refs to avoid stale closures
   const queueRef = useRef<Song[]>([]);
   const queueIndexRef = useRef<number>(-1);
   const playedSongIdsRef = useRef<Set<string>>(new Set());
-  
-  useEffect(() => {
-    queueRef.current = queue;
-    queueIndexRef.current = queueIndex;
-  }, [queue, queueIndex]);
+  const repeatRef = useRef(repeat);
+  const shuffleRef = useRef(shuffle);
+  const playerReadyRef = useRef(false);
+
+  useEffect(() => { queueRef.current = queue; queueIndexRef.current = queueIndex; }, [queue, queueIndex]);
+  useEffect(() => { repeatRef.current = repeat; }, [repeat]);
+  useEffect(() => { shuffleRef.current = shuffle; }, [shuffle]);
 
   const resetPlayedSongs = useCallback((songIds: string[] = []) => {
     playedSongIdsRef.current = new Set(songIds);
   }, []);
-
   const markSongAsPlayed = useCallback((songId?: string | null) => {
     if (!songId) return;
     playedSongIdsRef.current.add(songId);
   }, []);
 
-  // Initialize audio elements and analyzer
-  useEffect(() => {
-    audioRef.current = new Audio();
-    nextAudioRef.current = new Audio();
-    audioRef.current.volume = volume;
-    nextAudioRef.current.volume = 0;
-    audioRef.current.crossOrigin = "anonymous";
-    nextAudioRef.current.crossOrigin = "anonymous";
-    
-    audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
-    audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audioRef.current.addEventListener("error", handleError);
-
-    return () => {
-      if (crossfadeIntervalRef.current) {
-        clearInterval(crossfadeIntervalRef.current);
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      audioRef.current?.pause();
-      nextAudioRef.current?.pause();
-      audioContextRef.current?.close();
-      audioRef.current = null;
-      nextAudioRef.current = null;
-    };
-  }, []);
-
-  // Setup audio analyzer
-  const setupAnalyzer = useCallback(() => {
-    if (!audioRef.current || sourceRef.current) return;
-    
-    try {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 128;
-      
-      sourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
-      sourceRef.current.connect(analyserRef.current);
-      analyserRef.current.connect(audioContextRef.current.destination);
-    } catch (e) {
-      console.warn("Audio analyzer setup failed:", e);
-    }
-  }, []);
-
-  // Update frequency data for visualizer
-  useEffect(() => {
-    const updateFrequencyData = () => {
-      if (analyserRef.current && isPlaying) {
-        const data = new Uint8Array(analyserRef.current.frequencyBinCount);
-        analyserRef.current.getByteFrequencyData(data);
-        setFrequencyData(data);
-      }
-      animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
-    };
-
-    if (isPlaying) {
-      updateFrequencyData();
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isPlaying]);
-
-  const handleTimeUpdate = useCallback(() => {
-    if (!audioRef.current || isCrossfading) return;
-    const time = audioRef.current.currentTime;
-    setCurrentTime(time);
-    
-    const dur = audioRef.current.duration;
-    
-    // Crossfade takes priority over gapless
-    if (crossfadeEnabled && dur && time >= dur - crossfadeDuration && !isCrossfading) {
-      startCrossfade();
-    } 
-    // Gapless preloading: start preloading next song 3 seconds before end
-    else if (gaplessEnabled && !crossfadeEnabled && dur && time >= dur - 3 && !isPreloading) {
-      preloadNextSong();
-    }
-  }, [crossfadeEnabled, crossfadeDuration, gaplessEnabled, isCrossfading, isPreloading]);
-
-  const handleLoadedMetadata = useCallback(() => {
-    setDuration(audioRef.current?.duration || 0);
-  }, []);
-
-  const handleError = useCallback((e: Event) => {
-    console.error("Audio error:", e);
-    setIsPlaying(false);
-  }, []);
-
-  // Re-attach timeupdate listener when crossfade settings change
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
-    audio.removeEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    
-    return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-    };
-  }, [handleTimeUpdate]);
-
   const getNextIndex = useCallback((songs = queueRef.current, currentIndex = queueIndexRef.current) => {
     if (songs.length === 0) return -1;
-
-    if (!shuffle) {
+    const rp = repeatRef.current;
+    const sh = shuffleRef.current;
+    if (!sh) {
       const nextIndex = currentIndex + 1;
       if (nextIndex < songs.length) return nextIndex;
-      return repeat === "all" ? 0 : -1;
+      return rp === "all" ? 0 : -1;
     }
-
-    if (songs.length === 1) {
-      return repeat === "all" ? 0 : -1;
+    if (songs.length === 1) return rp === "all" ? 0 : -1;
+    const played = playedSongIdsRef.current;
+    let cands = songs
+      .map((s, i) => ({ s, i }))
+      .filter(({ s, i }) => i !== currentIndex && !played.has(s.id))
+      .map(({ i }) => i);
+    if (cands.length === 0) {
+      if (rp !== "all") return -1;
+      const cid = songs[currentIndex]?.id;
+      resetPlayedSongs(cid ? [cid] : []);
+      cands = songs
+        .map((s, i) => ({ s, i }))
+        .filter(({ s, i }) => i !== currentIndex && !playedSongIdsRef.current.has(s.id))
+        .map(({ i }) => i);
     }
-
-    const playedSongIds = playedSongIdsRef.current;
-    let candidateIndexes = songs
-      .map((song, index) => ({ song, index }))
-      .filter(({ song, index }) => index !== currentIndex && !playedSongIds.has(song.id))
-      .map(({ index }) => index);
-
-    if (candidateIndexes.length === 0) {
-      if (repeat !== "all") return -1;
-
-      const currentSongId = songs[currentIndex]?.id;
-      resetPlayedSongs(currentSongId ? [currentSongId] : []);
-
-      candidateIndexes = songs
-        .map((song, index) => ({ song, index }))
-        .filter(({ song, index }) => index !== currentIndex && !playedSongIdsRef.current.has(song.id))
-        .map(({ index }) => index);
-    }
-
-    if (candidateIndexes.length === 0) {
-      return repeat === "all" ? currentIndex : -1;
-    }
-
-    return candidateIndexes[Math.floor(Math.random() * candidateIndexes.length)];
-  }, [shuffle, repeat, resetPlayedSongs]);
-
-  const startCrossfade = useCallback(() => {
-    if (isCrossfading || !audioRef.current || !nextAudioRef.current) return;
-    
-    const nextIndex = getNextIndex();
-    if (nextIndex === -1 || repeat === "one") return;
-    
-    const nextSong = queue[nextIndex];
-    if (!nextSong) return;
-    
-    setIsCrossfading(true);
-    
-    // Preload next song
-    nextAudioRef.current.src = nextSong.file_url;
-    nextAudioRef.current.volume = 0;
-    nextAudioRef.current.play().catch(console.error);
-    
-    const fadeSteps = 50;
-    const stepDuration = (crossfadeDuration * 1000) / fadeSteps;
-    let step = 0;
-    
-    crossfadeIntervalRef.current = setInterval(() => {
-      step++;
-      const progress = step / fadeSteps;
-      
-      if (audioRef.current) {
-        audioRef.current.volume = Math.max(0, volume * (1 - progress));
-      }
-      if (nextAudioRef.current) {
-        nextAudioRef.current.volume = Math.min(volume, volume * progress);
-      }
-      
-      if (step >= fadeSteps) {
-        completeCrossfade(nextSong, nextIndex);
-      }
-    }, stepDuration);
-  }, [isCrossfading, getNextIndex, queue, volume, crossfadeDuration, repeat]);
-
-  const completeCrossfade = useCallback((nextSong: Song, nextIndex: number) => {
-    if (crossfadeIntervalRef.current) {
-      clearInterval(crossfadeIntervalRef.current);
-      crossfadeIntervalRef.current = null;
-    }
-    
-    // Swap audio elements
-    audioRef.current?.pause();
-    const temp = audioRef.current;
-    audioRef.current = nextAudioRef.current;
-    nextAudioRef.current = temp;
-    
-    // Reset the old (now next) audio element
-    if (nextAudioRef.current) {
-      nextAudioRef.current.pause();
-      nextAudioRef.current.src = "";
-      nextAudioRef.current.volume = 0;
-    }
-    
-    // Ensure current audio is at correct volume
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-      
-      // Re-attach event listeners (ended listener is handled by useEffect)
-      audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
-      audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
-      audioRef.current.addEventListener("error", handleError);
-    }
-    
-    setCurrentSong(nextSong);
-    setQueueIndex(nextIndex);
-    setDuration(audioRef.current?.duration || 0);
-    setIsCrossfading(false);
-    markSongAsPlayed(nextSong.id);
-    
-    // Track play
-    trackPlay.mutate(nextSong.id);
-    updateListeningActivity(nextSong);
-  }, [volume, handleTimeUpdate, handleLoadedMetadata, handleError, trackPlay, markSongAsPlayed]);
+    if (cands.length === 0) return rp === "all" ? currentIndex : -1;
+    return cands[Math.floor(Math.random() * cands.length)];
+  }, [resetPlayedSongs]);
 
   const updateListeningActivity = useCallback(async (song: Song) => {
     if (!user) return;
-    
-    await supabase
-      .from("listening_activity")
-      .update({ is_active: false })
-      .eq("user_id", user.id)
-      .eq("is_active", true);
-    
-    await supabase.from("listening_activity").insert({
-      user_id: user.id,
-      song_id: song.id,
-      is_active: true,
-    });
+    await supabase.from("listening_activity").update({ is_active: false }).eq("user_id", user.id).eq("is_active", true);
+    await supabase.from("listening_activity").insert({ user_id: user.id, song_id: song.id, is_active: true });
   }, [user]);
 
-  const playSongInternal = useCallback((song: Song) => {
-    if (!audioRef.current) return;
-    
-    // Clear any ongoing crossfade
-    if (crossfadeIntervalRef.current) {
-      clearInterval(crossfadeIntervalRef.current);
-      crossfadeIntervalRef.current = null;
-    }
-    setIsCrossfading(false);
-    
-    audioRef.current.src = song.file_url;
-    audioRef.current.volume = volume;
-    markSongAsPlayed(song.id);
-    audioRef.current.play().then(() => {
-      setIsPlaying(true);
-      setupAnalyzer();
-      trackPlay.mutate(song.id);
-      updateListeningActivity(song);
-    }).catch(console.error);
-  }, [trackPlay, updateListeningActivity, volume, setupAnalyzer, markSongAsPlayed]);
-
-  // handleSongEnd - defined after playSongInternal to avoid hoisting issues
   const handleSongEnd = useCallback(() => {
-    if (isCrossfading) return; // Already handled by crossfade
-    
-    const currentQueue = queueRef.current;
-    const currentIndex = queueIndexRef.current;
-    
-    if (repeat === "one") {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play();
-      }
-    } else {
-      const nextIndex = getNextIndex(currentQueue, currentIndex);
-      if (nextIndex !== -1) {
-        const nextSong = currentQueue[nextIndex];
-        if (nextSong) {
-          setQueueIndex(nextIndex);
-          setCurrentSong(nextSong);
-
-          // Use preloaded audio for gapless playback
-          if (gaplessEnabled && isPreloading && nextAudioRef.current?.src) {
-            // Swap audio elements for gapless transition
-            audioRef.current?.pause();
-            const temp = audioRef.current;
-            audioRef.current = nextAudioRef.current;
-            nextAudioRef.current = temp;
-
-            if (audioRef.current) {
-              audioRef.current.volume = volume;
-              audioRef.current.play().catch(console.error);
-              audioRef.current.addEventListener("timeupdate", handleTimeUpdate);
-              audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
-              audioRef.current.addEventListener("error", handleError);
-            }
-
-            if (nextAudioRef.current) {
-              nextAudioRef.current.pause();
-              nextAudioRef.current.src = "";
-            }
-
-            setIsPreloading(false);
-            setIsPlaying(true);
-            markSongAsPlayed(nextSong.id);
-            trackPlay.mutate(nextSong.id);
-            updateListeningActivity(nextSong);
-          } else {
-            playSongInternal(nextSong);
-          }
-          return;
-        }
-      }
-
-      setIsPlaying(false);
+    if (repeatRef.current === "one") {
+      playerRef.current?.seekTo(0, true);
+      playerRef.current?.playVideo();
+      return;
     }
-  }, [repeat, isCrossfading, gaplessEnabled, isPreloading, volume, playSongInternal, handleTimeUpdate, handleLoadedMetadata, handleError, trackPlay, updateListeningActivity, getNextIndex, markSongAsPlayed]);
+    const nextIndex = getNextIndex();
+    if (nextIndex !== -1) {
+      const nextSong = queueRef.current[nextIndex];
+      if (nextSong?.youtube_video_id) {
+        setQueueIndex(nextIndex);
+        setCurrentSong(nextSong);
+        markSongAsPlayed(nextSong.id);
+        playerRef.current?.loadVideoById(nextSong.youtube_video_id);
+        trackPlay.mutate(nextSong.id);
+        updateListeningActivity(nextSong);
+        return;
+      }
+    }
+    setIsPlaying(false);
+  }, [getNextIndex, markSongAsPlayed, trackPlay, updateListeningActivity]);
 
-  // Attach ended event listener whenever handleSongEnd changes
+  const handleSongEndRef = useRef(handleSongEnd);
+  useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
+
+  // Init YouTube player
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
-    const onEnded = () => handleSongEnd();
-    audio.addEventListener("ended", onEnded);
-    
-    return () => {
-      audio.removeEventListener("ended", onEnded);
-    };
-  }, [handleSongEnd]);
+    let cancelled = false;
+    loadYouTubeApi().then((YT) => {
+      if (cancelled) return;
+      // Ensure container exists
+      let host = document.getElementById(YT_PLAYER_DIV_ID);
+      if (!host) {
+        host = document.createElement("div");
+        host.id = YT_PLAYER_DIV_ID;
+        host.style.position = "fixed";
+        host.style.left = "-9999px";
+        host.style.top = "0";
+        host.style.width = "1px";
+        host.style.height = "1px";
+        host.style.pointerEvents = "none";
+        document.body.appendChild(host);
+      }
+      playerRef.current = new YT.Player(YT_PLAYER_DIV_ID, {
+        height: "1",
+        width: "1",
+        playerVars: { autoplay: 0, controls: 0, modestbranding: 1, playsinline: 1, rel: 0 },
+        events: {
+          onReady: () => {
+            playerReadyRef.current = true;
+            setPlayerReady(true);
+            try { playerRef.current.setVolume(Math.round(volume * 100)); } catch {}
+          },
+          onStateChange: (e: any) => {
+            const state = e.data;
+            if (state === YT.PlayerState.PLAYING) setIsPlaying(true);
+            else if (state === YT.PlayerState.PAUSED) setIsPlaying(false);
+            else if (state === YT.PlayerState.ENDED) handleSongEndRef.current();
+          },
+          onError: (e: any) => console.error("YT player error", e?.data),
+        },
+      });
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Poll time/duration
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      const p = playerRef.current;
+      if (!p || typeof p.getCurrentTime !== "function") return;
+      try {
+        const t = p.getCurrentTime();
+        const d = p.getDuration();
+        if (!Number.isNaN(t)) setCurrentTime(t);
+        if (!Number.isNaN(d)) setDuration(d);
+      } catch {}
+    }, 500);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  const playSongInternal = useCallback((song: Song) => {
+    if (!song.youtube_video_id) {
+      console.warn("Song has no youtube_video_id; cannot play", song);
+      return;
+    }
+    markSongAsPlayed(song.id);
+    if (playerReadyRef.current && playerRef.current?.loadVideoById) {
+      playerRef.current.loadVideoById(song.youtube_video_id);
+      try { playerRef.current.setVolume(Math.round(volume * 100)); } catch {}
+    }
+    trackPlay.mutate(song.id);
+    updateListeningActivity(song);
+  }, [markSongAsPlayed, trackPlay, updateListeningActivity, volume]);
 
   const play = useCallback((song: Song) => {
     setCurrentSong(song);
     setPlayingFrom("queue");
     setPlaylistName(null);
-    
-    const songInQueue = queue.findIndex(s => s.id === song.id);
-    if (songInQueue === -1) {
-      setQueueState(prev => [...prev, song]);
+    const idx = queue.findIndex((s) => s.id === song.id);
+    if (idx === -1) {
+      setQueueState((prev) => [...prev, song]);
       setQueueIndex(queue.length);
-      resetPlayedSongs([song.id]);
     } else {
-      setQueueIndex(songInQueue);
-      resetPlayedSongs([song.id]);
+      setQueueIndex(idx);
     }
-    
+    resetPlayedSongs([song.id]);
     playSongInternal(song);
   }, [queue, playSongInternal, resetPlayedSongs]);
 
-  const pause = useCallback(() => {
-    audioRef.current?.pause();
-    setIsPlaying(false);
-  }, []);
-
-  const resume = useCallback(() => {
-    audioRef.current?.play();
-    setIsPlaying(true);
-  }, []);
-
-  const toggle = useCallback(() => {
-    if (isPlaying) {
-      pause();
-    } else {
-      resume();
-    }
-  }, [isPlaying, pause, resume]);
-
+  const pause = useCallback(() => { playerRef.current?.pauseVideo?.(); }, []);
+  const resume = useCallback(() => { playerRef.current?.playVideo?.(); }, []);
+  const toggle = useCallback(() => { isPlaying ? pause() : resume(); }, [isPlaying, pause, resume]);
   const seek = useCallback((time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
+    playerRef.current?.seekTo?.(time, true);
+    setCurrentTime(time);
   }, []);
-
   const setVolume = useCallback((vol: number) => {
     setVolumeState(vol);
-    if (audioRef.current && !isCrossfading) {
-      audioRef.current.volume = vol;
-    }
-  }, [isCrossfading]);
+    try { playerRef.current?.setVolume?.(Math.round(vol * 100)); } catch {}
+  }, []);
 
   const next = useCallback(() => {
-    // Cancel any ongoing crossfade
-    if (crossfadeIntervalRef.current) {
-      clearInterval(crossfadeIntervalRef.current);
-      crossfadeIntervalRef.current = null;
-    }
-    setIsCrossfading(false);
-    
     const nextIndex = getNextIndex(queue, queueIndex);
-
     if (nextIndex !== -1 && queue[nextIndex]) {
       setQueueIndex(nextIndex);
       setCurrentSong(queue[nextIndex]);
       playSongInternal(queue[nextIndex]);
     }
-  }, [queueIndex, queue, playSongInternal, getNextIndex]);
+  }, [queue, queueIndex, getNextIndex, playSongInternal]);
 
   const previous = useCallback(() => {
-    // Cancel any ongoing crossfade
-    if (crossfadeIntervalRef.current) {
-      clearInterval(crossfadeIntervalRef.current);
-      crossfadeIntervalRef.current = null;
-    }
-    setIsCrossfading(false);
-    
-    if (currentTime > 3) {
-      seek(0);
-      return;
-    }
-    
+    if (currentTime > 3) { seek(0); return; }
     const prevIndex = queueIndex - 1;
-    if (prevIndex >= 0) {
+    if (prevIndex >= 0 && queue[prevIndex]) {
       setQueueIndex(prevIndex);
       setCurrentSong(queue[prevIndex]);
       playSongInternal(queue[prevIndex]);
+    } else {
+      seek(0);
     }
-  }, [queueIndex, queue, currentTime, seek, playSongInternal]);
+  }, [currentTime, queueIndex, queue, seek, playSongInternal]);
 
   const addToQueue = useCallback((song: Song) => {
-    setQueueState(prev => [...prev, song]);
+    setQueueState((prev) => (prev.some((s) => s.id === song.id) ? prev : [...prev, song]));
   }, []);
-
   const removeFromQueue = useCallback((songId: string) => {
-    setQueueState(prev => prev.filter(s => s.id !== songId));
+    setQueueState((prev) => prev.filter((s) => s.id !== songId));
   }, []);
-
   const reorderQueue = useCallback((newQueue: Song[]) => {
-    const currentId = currentSong?.id;
     setQueueState(newQueue);
-    if (currentId) {
-      const newIdx = newQueue.findIndex(s => s.id === currentId);
-      if (newIdx !== -1) setQueueIndex(newIdx);
+    if (currentSong) {
+      const i = newQueue.findIndex((s) => s.id === currentSong.id);
+      if (i !== -1) setQueueIndex(i);
     }
-  }, [currentSong?.id]);
-
-  const clearQueue = useCallback(() => {
-    setQueueState([]);
-    setQueueIndex(-1);
-    setPlayingFrom(null);
-    setPlaylistName(null);
-    resetPlayedSongs();
-  }, [resetPlayedSongs]);
-
+  }, [currentSong]);
+  const clearQueue = useCallback(() => { setQueueState([]); setQueueIndex(-1); }, []);
   const setQueue = useCallback((songs: Song[], name?: string) => {
     setQueueState(songs);
-    setQueueIndex(0);
+    setPlaylistName(name ?? null);
     setPlayingFrom(name ? "playlist" : "queue");
-    setPlaylistName(name || null);
-    if (songs.length > 0) {
-      resetPlayedSongs([songs[0].id]);
+    resetPlayedSongs(songs[0] ? [songs[0].id] : []);
+    if (songs[0]) {
+      setQueueIndex(0);
       setCurrentSong(songs[0]);
       playSongInternal(songs[0]);
-    } else {
-      resetPlayedSongs();
     }
   }, [playSongInternal, resetPlayedSongs]);
 
-  const toggleShuffle = useCallback(() => {
-    setShuffle(prev => !prev);
-  }, []);
-
-  const toggleRepeat = useCallback(() => {
-    setRepeat(prev => {
-      if (prev === "off") return "all";
-      if (prev === "all") return "one";
-      return "off";
-    });
-  }, []);
-
-  const setCrossfadeEnabled = useCallback((enabled: boolean) => {
-    setCrossfadeEnabledState(enabled);
-    // Disable gapless when crossfade is enabled
-    if (enabled) {
-      setGaplessEnabledState(false);
-    }
-  }, []);
-
-  const setCrossfadeDuration = useCallback((duration: number) => {
-    setCrossfadeDurationState(duration);
-  }, []);
-
-  const setGaplessEnabled = useCallback((enabled: boolean) => {
-    setGaplessEnabledState(enabled);
-    // Disable crossfade when gapless is enabled
-    if (enabled) {
-      setCrossfadeEnabledState(false);
-    }
-  }, []);
-
-  // Preload next song for gapless playback
-  const preloadNextSong = useCallback(() => {
-    if (isPreloading || !nextAudioRef.current) return;
-    
-    const currentQueue = queueRef.current;
-    const currentIndex = queueIndexRef.current;
-
-    const nextIndex = getNextIndex(currentQueue, currentIndex);
-    if (nextIndex === -1) return;
-    
-    const nextSong = currentQueue[nextIndex];
-    if (!nextSong) return;
-    
-    setIsPreloading(true);
-    nextAudioRef.current.src = nextSong.file_url;
-    nextAudioRef.current.load();
-  }, [isPreloading, getNextIndex]);
+  const toggleShuffle = useCallback(() => setShuffle((s) => !s), []);
+  const toggleRepeat = useCallback(() => setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off")), []);
 
   return (
     <PlayerContext.Provider
       value={{
-        currentSong,
-        isPlaying,
-        currentTime,
-        duration,
-        volume,
-        queue,
-        shuffle,
-        repeat,
-        crossfadeEnabled,
-        crossfadeDuration,
-        gaplessEnabled,
-        playingFrom,
-        playlistName,
-        frequencyData,
-        play,
-        pause,
-        resume,
-        toggle,
-        seek,
-        setVolume,
-        next,
-        previous,
-        addToQueue,
-        removeFromQueue,
-        reorderQueue,
-        clearQueue,
-        setQueue,
-        toggleShuffle,
-        toggleRepeat,
-        setCrossfadeEnabled,
-        setCrossfadeDuration,
-        setGaplessEnabled,
+        currentSong, isPlaying, currentTime, duration, volume, queue, shuffle, repeat,
+        crossfadeEnabled, crossfadeDuration, gaplessEnabled, playingFrom, playlistName, frequencyData,
+        play, pause, resume, toggle, seek, setVolume, next, previous,
+        addToQueue, removeFromQueue, reorderQueue, clearQueue, setQueue,
+        toggleShuffle, toggleRepeat,
+        setCrossfadeEnabled: setCrossfadeEnabledState,
+        setCrossfadeDuration: setCrossfadeDurationState,
+        setGaplessEnabled: setGaplessEnabledState,
       }}
     >
       {children}
@@ -640,9 +334,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const usePlayer = () => {
-  const context = useContext(PlayerContext);
-  if (!context) {
-    throw new Error("usePlayer must be used within a PlayerProvider");
-  }
-  return context;
+  const ctx = useContext(PlayerContext);
+  if (!ctx) throw new Error("usePlayer must be used within PlayerProvider");
+  return ctx;
 };
