@@ -177,7 +177,11 @@ const Search = () => {
               </div>
             )}
           </section>
+
+          {/* YouTube direct search */}
+          <YouTubeSearch query={query} />
         </div>
+
       ) : (
         <>
           {/* Search History */}
