@@ -85,7 +85,7 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
       >
         <div className={`relative ${isSmall ? 'mb-1.5' : 'mb-2 md:mb-3'}`}>
           <img
-            src={song.cover_url || "/placeholder.svg"}
+            src={song.cover_url || song.thumbnail || "/placeholder.svg"}
             alt={song.title}
             loading="lazy"
             decoding="async"
