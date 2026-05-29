@@ -203,6 +203,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ingestion_sources: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          kind: string
+          last_error: string | null
+          last_run_at: string | null
+          max_results: number
+          region: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind: string
+          last_error?: string | null
+          last_run_at?: string | null
+          max_results?: number
+          region?: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          kind?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          max_results?: number
+          region?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       jam_sessions: {
         Row: {
           created_at: string
@@ -920,14 +959,18 @@ export type Database = {
           cover_url: string | null
           created_at: string
           duration: number | null
-          file_url: string
+          file_url: string | null
           genre: string | null
           id: string
           is_public: boolean
           play_count: number
+          source: string
+          thumbnail: string | null
           title: string
           updated_at: string
-          user_id: string
+          user_id: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
         }
         Insert: {
           album?: string | null
@@ -936,14 +979,18 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           duration?: number | null
-          file_url: string
+          file_url?: string | null
           genre?: string | null
           id?: string
           is_public?: boolean
           play_count?: number
+          source?: string
+          thumbnail?: string | null
           title: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
         }
         Update: {
           album?: string | null
@@ -952,14 +999,18 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           duration?: number | null
-          file_url?: string
+          file_url?: string | null
           genre?: string | null
           id?: string
           is_public?: boolean
           play_count?: number
+          source?: string
+          thumbnail?: string | null
           title?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
         }
         Relationships: [
           {
