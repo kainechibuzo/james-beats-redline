@@ -21,8 +21,22 @@ const Terms = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ terms_accepted_at: new Date().toISOString() })
-        .eq("user_id", user.id);
+        .upsert(
+          {
+            user_id: user.id,
+            terms_accepted_at: new Date().toISOString(),
+            display_name:
+              (user.user_metadata as any)?.display_name ??
+              (user.user_metadata as any)?.username ??
+              user.email?.split("@")[0] ??
+              null,
+            username:
+              (user.user_metadata as any)?.username ??
+              user.email?.split("@")[0] ??
+              null,
+          },
+          { onConflict: "user_id" },
+        );
 
       if (error) throw error;
       
