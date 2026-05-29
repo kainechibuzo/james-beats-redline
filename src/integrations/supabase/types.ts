@@ -447,6 +447,57 @@ export type Database = {
           },
         ]
       }
+      mixes: {
+        Row: {
+          artist: string | null
+          created_at: string
+          id: string
+          is_featured: boolean
+          is_public: boolean
+          play_count: number
+          thumbnail: string | null
+          title: string
+          total_duration: string | null
+          tracks: Json
+          updated_at: string
+          user_id: string | null
+          youtube_url: string
+          youtube_video_id: string
+        }
+        Insert: {
+          artist?: string | null
+          created_at?: string
+          id?: string
+          is_featured?: boolean
+          is_public?: boolean
+          play_count?: number
+          thumbnail?: string | null
+          title: string
+          total_duration?: string | null
+          tracks?: Json
+          updated_at?: string
+          user_id?: string | null
+          youtube_url: string
+          youtube_video_id: string
+        }
+        Update: {
+          artist?: string | null
+          created_at?: string
+          id?: string
+          is_featured?: boolean
+          is_public?: boolean
+          play_count?: number
+          thumbnail?: string | null
+          title?: string
+          total_duration?: string | null
+          tracks?: Json
+          updated_at?: string
+          user_id?: string | null
+          youtube_url?: string
+          youtube_video_id?: string
+        }
+        Relationships: []
+      }
       playlist_collaborators: {
         Row: {
           added_at: string
