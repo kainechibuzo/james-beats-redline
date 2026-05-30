@@ -735,6 +735,10 @@ const Admin = () => {
             <Rss className="w-4 h-4" />
             YouTube Sources
           </TabsTrigger>
+          <TabsTrigger value="yt-seed" className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            YouTube Seeder
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
