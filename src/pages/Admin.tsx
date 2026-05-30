@@ -34,7 +34,8 @@ import ArtistPromotion from "@/components/admin/ArtistPromotion";
 import PaymentSettings from "@/components/admin/PaymentSettings";
 import MixManagement from "@/components/admin/MixManagement";
 import IngestionSources from "@/components/admin/IngestionSources";
-import { Rss } from "lucide-react";
+import { Rss, Sparkles } from "lucide-react";
+import YouTubeSeeder from "@/components/admin/YouTubeSeeder";
 import {
   LineChart,
   Line,
