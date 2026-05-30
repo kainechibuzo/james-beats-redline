@@ -906,6 +906,10 @@ const Admin = () => {
         <TabsContent value="ingest">
           <IngestionSources />
         </TabsContent>
+
+        <TabsContent value="yt-seed">
+          <YouTubeSeeder />
+        </TabsContent>
       </Tabs>
     </div>
   );
