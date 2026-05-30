@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Music, FileText, Shield, Users } from "lucide-react";
+import { Music, FileText, Shield, Users, AlertCircle, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -11,42 +11,109 @@ import { toast } from "sonner";
 const Terms = () => {
   const [accepted, setAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [scrollRef, setScrollRef] = useState<HTMLDivElement | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Check if user already accepted terms
+  useEffect(() => {
+    if (!user) return;
+
+    const checkTermsStatus = async () => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("terms_accepted_at")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (data?.terms_accepted_at) {
+          // User already accepted, skip to home
+          navigate("/home", { replace: true });
+        }
+      } catch (err) {
+        console.error("Error checking terms status:", err);
+      }
+    };
+
+    checkTermsStatus();
+  }, [user, navigate]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 50;
+    setHasScrolledToBottom(isNearBottom || element.scrollHeight - element.scrollTop === element.clientHeight);
+  };
+
   const handleAccept = async () => {
-    if (!accepted || !user) return;
-    
+    if (!accepted || !user) {
+      setError("Please accept the terms to continue");
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
+
     try {
-      const { error } = await supabase
+      // First, ensure the profile exists
+      const { data: existingProfile } = await supabase
         .from("profiles")
-        .upsert(
-          {
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        // Create profile if it doesn't exist
+        const { error: createError } = await supabase
+          .from("profiles")
+          .insert({
             user_id: user.id,
-            terms_accepted_at: new Date().toISOString(),
             display_name:
               (user.user_metadata as any)?.display_name ??
               (user.user_metadata as any)?.username ??
               user.email?.split("@")[0] ??
-              null,
+              "User",
             username:
               (user.user_metadata as any)?.username ??
               user.email?.split("@")[0] ??
               null,
-          },
-          { onConflict: "user_id" },
-        );
+          });
 
-      if (error) throw error;
-      
+        if (createError) throw createError;
+      }
+
+      // Now update with terms acceptance
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
       toast.success("Welcome to James Beats!");
-      navigate("/home");
-    } catch (error) {
-      toast.error("Failed to accept terms. Please try again.");
+      
+      // Force a small delay to ensure database is updated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      navigate("/home", { replace: true });
+    } catch (err) {
+      console.error("Error accepting terms:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to accept terms";
+      setError(errorMessage);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSkip = () => {
+    // Allow users to skip and try again later
+    toast.info("You can accept terms anytime from settings");
+    navigate("/home", { replace: true });
   };
 
   return (
@@ -72,8 +139,11 @@ const Terms = () => {
             <h2 className="text-xl font-semibold">Terms of Use & User Agreement</h2>
           </div>
 
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-6 text-sm text-muted-foreground">
+          <ScrollArea className="h-[400px] pr-4" onScroll={handleScroll}>
+            <div 
+              ref={setScrollRef}
+              className="space-y-6 text-sm text-muted-foreground"
+            >
               <section>
                 <h3 className="text-foreground font-semibold mb-2 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" />
@@ -149,7 +219,7 @@ const Terms = () => {
               <section>
                 <h3 className="text-foreground font-semibold mb-2">5. Termination</h3>
                 <p>
-                  Even if your account is terminated, the joint ownership and license rights granted to James Beats shall survive and remain in effect. You may request removal of your Content, but James Beats retains the right to continue using Content that has been sublicensed or integrated into platform features.
+                  Even if your account is terminated, the joint ownership and license rights granted to James Beats shall survive and remain in effect. You may request removal of your Content, but James Beats reserves the right to maintain copies for archival and legal purposes.
                 </p>
               </section>
 
@@ -175,12 +245,32 @@ const Terms = () => {
             </div>
           </ScrollArea>
 
+          {/* Scroll indicator */}
+          {!hasScrolledToBottom && (
+            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <ChevronUp className="w-4 h-4 animate-bounce" />
+              Scroll to bottom to continue
+            </div>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
           <div className="mt-6 space-y-4">
             <div className="flex items-center space-x-3">
               <Checkbox
                 id="accept-terms"
                 checked={accepted}
-                onCheckedChange={(checked) => setAccepted(checked === true)}
+                onCheckedChange={(checked) => {
+                  setAccepted(checked === true);
+                  setError(null);
+                }}
+                disabled={isLoading}
               />
               <label
                 htmlFor="accept-terms"
@@ -190,14 +280,24 @@ const Terms = () => {
               </label>
             </div>
 
-            <Button
-              variant="glow"
-              className="w-full"
-              disabled={!accepted || isLoading}
-              onClick={handleAccept}
-            >
-              {isLoading ? "Processing..." : "I Accept - Continue to James Beats"}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="glow"
+                className="flex-1"
+                disabled={!accepted || isLoading}
+                onClick={handleAccept}
+              >
+                {isLoading ? "Processing..." : "I Accept - Continue"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={isLoading}
+                onClick={handleSkip}
+              >
+                Skip for Now
+              </Button>
+            </div>
           </div>
         </div>
 
