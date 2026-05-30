@@ -1,13 +1,14 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, 
   Shuffle, Repeat, Repeat1, Heart, Share2, ListMusic, Mic2, 
-  X, Disc3, Layers, Settings2, ChevronDown, Plus
+  X, Disc3, Layers, Settings2, ChevronDown, Plus, Monitor
 } from "lucide-react";
 import { useIsLiked, useToggleLike } from "@/hooks/useSongs";
 import LyricsDisplay from "./LyricsDisplay";
@@ -53,6 +54,9 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
   const [swipeHint, setSwipeHint] = useState<string | null>(null);
   const { data: isLiked } = useIsLiked(currentSong?.id || "");
   const toggleLike = useToggleLike();
+
+  // Integrate always-on display (wake lock) when music is playing
+  const { isSupported: wakeLockSupported, isActive: wakeLockActive } = useWakeLock(isPlaying && isOpen);
 
   const formatTime = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return "0:00";
@@ -155,14 +159,28 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
                 )}
               </div>
               
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setShowSettings(!showSettings)}
-                className={cn("rounded-full", showSettings && "bg-muted")}
-              >
-                <Settings2 className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Always-on Display indicator */}
+                {wakeLockSupported && (
+                  <div className={cn(
+                    "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
+                    wakeLockActive 
+                      ? "bg-primary/20 text-primary" 
+                      : "bg-muted/50 text-muted-foreground"
+                  )}>
+                    <Monitor className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Always On</span>
+                  </div>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={cn("rounded-full", showSettings && "bg-muted")}
+                >
+                  <Settings2 className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
 
             {/* Gesture hints */}
@@ -181,24 +199,42 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
                   exit={{ opacity: 0, height: 0 }}
                   className="mb-4 p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50"
                 >
-                  <h3 className="text-sm font-semibold mb-3">Crossfade Settings</h3>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-muted-foreground">Enable crossfade</span>
-                    <Switch checked={crossfadeEnabled} onCheckedChange={setCrossfadeEnabled} />
-                  </div>
-                  {crossfadeEnabled && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Duration</span>
-                        <span className="text-sm font-medium">{crossfadeDuration}s</span>
+                  <h3 className="text-sm font-semibold mb-3">Settings</h3>
+                  
+                  {/* Crossfade Settings */}
+                  <div className="mb-4 pb-4 border-b border-border/30">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-3">Crossfade</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-muted-foreground">Enable crossfade</span>
+                      <Switch checked={crossfadeEnabled} onCheckedChange={setCrossfadeEnabled} />
+                    </div>
+                    {crossfadeEnabled && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Duration</span>
+                          <span className="text-sm font-medium">{crossfadeDuration}s</span>
+                        </div>
+                        <Slider
+                          value={[crossfadeDuration]}
+                          min={1}
+                          max={12}
+                          step={1}
+                          onValueChange={([v]) => setCrossfadeDuration(v)}
+                        />
                       </div>
-                      <Slider
-                        value={[crossfadeDuration]}
-                        min={1}
-                        max={12}
-                        step={1}
-                        onValueChange={([v]) => setCrossfadeDuration(v)}
-                      />
+                    )}
+                  </div>
+
+                  {/* Always-on Display Info */}
+                  {wakeLockSupported && (
+                    <div className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Monitor className="w-4 h-4 text-primary" />
+                        <span className="font-medium">Screen will stay on during playback</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground/70">
+                        This feature keeps your device screen active while music is playing.
+                      </p>
                     </div>
                   )}
                 </motion.div>
