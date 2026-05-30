@@ -9,17 +9,23 @@ import { useLikedRadioStations, useToggleRadioLike } from "@/hooks/useRadioLikes
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 
 const GENRE_FILTERS = ["All", "Hip Hop", "R&B", "Afrobeats", "Pop", "Jazz", "Gospel", "Talk"];
 
+const extractYouTubeId = (url: string): string | null => {
+  const m = url?.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})/);
+  return m?.[1] ?? null;
+};
+
 const Radio = () => {
   const [activeStation, setActiveStation] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState("All");
-  const [audio] = useState(() => new Audio());
   const { user } = useAuth();
   const { data: likedSet } = useLikedRadioStations();
   const toggleLike = useToggleRadioLike();
+  const player = usePlayer();
+  const isPlaying = !!activeStation && player.isPlaying && player.currentSong?.id === `radio-${activeStation}`;
 
   const { data: stations, isLoading } = useQuery({
     queryKey: ["radio-stations"],
@@ -38,15 +44,34 @@ const Radio = () => {
   );
 
   const handlePlay = (station: any) => {
-    if (activeStation === station.id && isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      audio.src = station.stream_url;
-      audio.play().catch(() => {});
-      setActiveStation(station.id);
-      setIsPlaying(true);
+    if (activeStation === station.id && player.isPlaying) {
+      player.pause();
+      return;
     }
+    const ytId = extractYouTubeId(station.stream_url);
+    if (!ytId) {
+      toast.error("Station has no playable YouTube source");
+      return;
+    }
+    player.play({
+      id: `radio-${station.id}`,
+      user_id: null,
+      title: station.name,
+      artist: station.description || "Live Radio",
+      album: null,
+      genre: station.genre,
+      duration: 0,
+      file_url: null,
+      cover_url: station.cover_url,
+      thumbnail: station.cover_url,
+      youtube_video_id: ytId,
+      youtube_url: station.stream_url,
+      source: "youtube",
+      play_count: 0,
+      is_public: true,
+      created_at: new Date().toISOString(),
+    });
+    setActiveStation(station.id);
   };
 
   return (

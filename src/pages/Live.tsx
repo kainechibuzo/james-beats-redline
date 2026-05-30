@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tv, Play, Pause, Signal, Users, Calendar, Newspaper, Trophy } from "lucide-react";
+import { usePlayer } from "@/contexts/PlayerContext";
+import { toast } from "sonner";
 
 const CATEGORIES = [
   { id: "all", label: "All", icon: Tv },
@@ -14,11 +16,16 @@ const CATEGORIES = [
   { id: "talk", label: "Talk", icon: Tv },
 ];
 
+const extractYouTubeId = (url: string): string | null => {
+  const m = url?.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})/);
+  return m?.[1] ?? null;
+};
+
 const Live = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [activeStream, setActiveStream] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audio] = useState(() => new Audio());
+  const player = usePlayer();
+  const isPlaying = !!activeStream && player.isPlaying && player.currentSong?.id === `live-${activeStream}`;
 
   const { data: streams, isLoading } = useQuery({
     queryKey: ["live-streams"],
@@ -41,15 +48,34 @@ const Live = () => {
   const upcoming = filtered?.filter((s) => !s.is_live && s.scheduled_at) || [];
 
   const handlePlay = (stream: any) => {
-    if (activeStream === stream.id && isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      audio.src = stream.stream_url;
-      audio.play().catch(() => {});
-      setActiveStream(stream.id);
-      setIsPlaying(true);
+    if (activeStream === stream.id && player.isPlaying) {
+      player.pause();
+      return;
     }
+    const ytId = extractYouTubeId(stream.stream_url);
+    if (!ytId) {
+      toast.error("Stream has no playable YouTube source");
+      return;
+    }
+    player.play({
+      id: `live-${stream.id}`,
+      user_id: null,
+      title: stream.title,
+      artist: stream.host_name || stream.category || "Live",
+      album: null,
+      genre: stream.category,
+      duration: 0,
+      file_url: null,
+      cover_url: stream.cover_url,
+      thumbnail: stream.cover_url,
+      youtube_video_id: ytId,
+      youtube_url: stream.stream_url,
+      source: "youtube",
+      play_count: 0,
+      is_public: true,
+      created_at: new Date().toISOString(),
+    });
+    setActiveStream(stream.id);
   };
 
   return (

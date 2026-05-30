@@ -34,7 +34,8 @@ import ArtistPromotion from "@/components/admin/ArtistPromotion";
 import PaymentSettings from "@/components/admin/PaymentSettings";
 import MixManagement from "@/components/admin/MixManagement";
 import IngestionSources from "@/components/admin/IngestionSources";
-import { Rss } from "lucide-react";
+import { Rss, Sparkles } from "lucide-react";
+import YouTubeSeeder from "@/components/admin/YouTubeSeeder";
 import {
   LineChart,
   Line,
@@ -735,6 +736,10 @@ const Admin = () => {
             <Rss className="w-4 h-4" />
             YouTube Sources
           </TabsTrigger>
+          <TabsTrigger value="yt-seed" className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            YouTube Seeder
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -900,6 +905,10 @@ const Admin = () => {
 
         <TabsContent value="ingest">
           <IngestionSources />
+        </TabsContent>
+
+        <TabsContent value="yt-seed">
+          <YouTubeSeeder />
         </TabsContent>
       </Tabs>
     </div>
