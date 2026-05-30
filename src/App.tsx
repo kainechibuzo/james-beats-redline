@@ -1,142 +1,168 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./components/theme-provider";
-import { AuthProvider } from "./contexts/AuthContext";
-import { PlayerProvider } from "./contexts/PlayerContext";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import TermsGuard from "./components/auth/TermsGuard";
-import MainLayout from "./components/layout/MainLayout";
-import Terms from "./pages/Terms";
-import Home from "./pages/Home";
-import Search from "./pages/Search";
-import Albums from "./pages/Albums";
-import Album from "./pages/Album";
-import Library from "./pages/Library";
-import Upload from "./pages/Upload";
-import Profile from "./pages/Profile";
-import LikedSongs from "./pages/LikedSongs";
-import LikedAlbums from "./pages/LikedAlbums";
-import RecentlyPlayed from "./pages/RecentlyPlayed";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import PlaylistPage from "./pages/Playlist";
-import Artist from "./pages/Artist";
-import DJ from "./pages/DJ";
-import YearlyRecap from "./pages/YearlyRecap";
-import Admin from "./pages/Admin";
-import Welcome from "./pages/Welcome";
-import Settings from "./pages/Settings";
-import Explore from "./pages/Explore";
-import Radio from "./pages/Radio";
-import Podcasts from "./pages/Podcasts";
-import Live from "./pages/Live";
-import Mixes from "./pages/Mixes";
-import MixDetail from "./pages/MixDetail";
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from './context/AuthContext';
+import { AuthPage } from './pages/AuthPage';
+import { Player } from './components/Player';
+import { TrackList } from './components/TrackList';
+import { usePlayer } from './hooks/usePlayer';
+import { useMediaSession } from './hooks/useMediaSession';
+import { supabase, type Playlist, type Track } from './lib/supabase';
+import { LogOut, Music } from 'lucide-react';
 
-const queryClient = new QueryClient();
+function MainApp() {
+  const { user, signOut } = useAuth();
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
 
-const App = () => {
+  const {
+    currentTrack,
+    currentTime,
+    volume,
+    isPlaying,
+    initializePlayer,
+    playNextSong,
+    playPreviousSong,
+    playTrack,
+    togglePlayPause,
+    seekTo,
+    setPlayerVolume
+  } = usePlayer(tracks, user?.id || null);
+
+  useMediaSession(currentTrack, isPlaying, {
+    play: togglePlayPause,
+    pause: togglePlayPause,
+    previoustrack: playPreviousSong,
+    nexttrack: playNextSong,
+    seekto: (details) => seekTo(details.seekTime)
+  });
+
+  useEffect(() => {
+    loadPlaylist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const loadPlaylist = async () => {
+    if (!user) return;
+
+    const { data: playlists } = await supabase
+      .from('playlists')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let currentPlaylist = playlists;
+
+    if (!currentPlaylist) {
+      const { data: newPlaylist, error } = await supabase
+        .from('playlists')
+        .insert({
+          user_id: user.id,
+          name: 'My Playlist'
+        })
+        .select()
+        .maybeSingle();
+
+      if (!error && newPlaylist) {
+        currentPlaylist = newPlaylist;
+      }
+    }
+
+    if (currentPlaylist) {
+      setPlaylist(currentPlaylist);
+      await loadTracks(currentPlaylist.id);
+    }
+  };
+
+  const loadTracks = async (playlistId: string) => {
+    const { data } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('playlist_id', playlistId)
+      .order('position', { ascending: true });
+
+    if (data) {
+      setTracks(data);
+    }
+  };
+
+  const handlePlayerReady = useCallback((playerId: string) => {
+    initializePlayer(playerId);
+  }, [initializePlayer]);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-        <AuthProvider>
-          <PlayerProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <TermsGuard>
-                  <Routes>
-                    <Route path="/" element={<Welcome />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route element={<MainLayout />}>
-                    <Route path="/home" element={<Home />} />
-                    <Route path="/search" element={<Search />} />
-                    <Route
-                      path="/library"
-                      element={
-                        <ProtectedRoute>
-                          <Library />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/upload"
-                      element={
-                        <ProtectedRoute>
-                          <Upload />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/profile"
-                      element={
-                        <ProtectedRoute>
-                          <Profile />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/liked"
-                      element={
-                        <ProtectedRoute>
-                          <LikedSongs />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/liked-albums"
-                      element={
-                        <ProtectedRoute>
-                          <LikedAlbums />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/recent"
-                      element={
-                        <ProtectedRoute>
-                          <RecentlyPlayed />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/playlist/:id"
-                      element={
-                        <ProtectedRoute>
-                          <PlaylistPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="/artist/:name" element={<Artist />} />
-                    <Route path="/albums" element={<Albums />} />
-                    <Route path="/album/:id" element={<Album />} />
-                    <Route path="/dj" element={<DJ />} />
-                    <Route path="/recap" element={<YearlyRecap />} />
-                    <Route path="/admin" element={<Admin />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/explore" element={<Explore />} />
-                    <Route path="/radio" element={<Radio />} />
-                    <Route path="/podcasts" element={<Podcasts />} />
-                    <Route path="/live" element={<Live />} />
-                    <Route path="/mixes" element={<Mixes />} />
-                    <Route path="/mixes/:id" element={<MixDetail />} />
-                  </Route>
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </TermsGuard>
-              </BrowserRouter>
-            </TooltipProvider>
-          </PlayerProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Header */}
+      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg">
+              <Music className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">James Beats</h1>
+              <p className="text-xs text-slate-400">Persistent playback</p>
+            </div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <TrackList
+        playlist={playlist}
+        tracks={tracks}
+        currentTrackId={currentTrack?.id || null}
+        isPlaying={isPlaying}
+        onTrackSelect={playTrack}
+        onTracksUpdate={() => playlist && loadTracks(playlist.id)}
+      />
+
+      {/* Player */}
+      <Player
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        currentTime={currentTime}
+        duration={currentTrack?.duration || 0}
+        volume={volume}
+        onPlayPause={togglePlayPause}
+        onNext={playNextSong}
+        onPrevious={playPreviousSong}
+        onSeek={seekTo}
+        onVolumeChange={setPlayerVolume}
+        onPlayerReady={handlePlayerReady}
+      />
+    </div>
   );
-};
+}
+
+function App() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  return <MainApp />;
+}
 
 export default App;
