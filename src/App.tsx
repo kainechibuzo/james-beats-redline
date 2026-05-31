@@ -30,9 +30,7 @@ import Admin from "./pages/Admin";
 import Welcome from "./pages/Welcome";
 import Settings from "./pages/Settings";
 import Explore from "./pages/Explore";
-import Radio from "./pages/Radio";
 import Podcasts from "./pages/Podcasts";
-import Live from "./pages/Live";
 import Mixes from "./pages/Mixes";
 import MixDetail from "./pages/MixDetail";
 
@@ -120,9 +118,7 @@ const App = () => {
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/explore" element={<Explore />} />
-                    <Route path="/radio" element={<Radio />} />
                     <Route path="/podcasts" element={<Podcasts />} />
-                    <Route path="/live" element={<Live />} />
                     <Route path="/mixes" element={<Mixes />} />
                     <Route path="/mixes/:id" element={<MixDetail />} />
                   </Route>

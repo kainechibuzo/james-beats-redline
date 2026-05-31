@@ -19,9 +19,11 @@ interface PlayerContextType {
   playlistName: string | null;
   frequencyData: Uint8Array;
   play: (song: Song) => void;
+  playSong: (song: Song, queueSongs?: Song[], playlistName?: string) => void;
   pause: () => void;
   resume: () => void;
   toggle: () => void;
+  togglePlay: () => void;
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
   next: () => void;
@@ -283,9 +285,26 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     playSongInternal(song);
   }, [queue, playSongInternal, resetPlayedSongs]);
 
+  // Compatibility alias used across the app: playSong(song, queueList?, playlistName?)
+  const playSong = useCallback((song: Song, queueSongs?: Song[], name?: string) => {
+    if (queueSongs && queueSongs.length > 0) {
+      const idx = Math.max(0, queueSongs.findIndex((s) => s.id === song.id));
+      setQueueState(queueSongs);
+      setQueueIndex(idx);
+      setPlaylistName(name ?? null);
+      setPlayingFrom(name ? "playlist" : "queue");
+      setCurrentSong(song);
+      resetPlayedSongs([song.id]);
+      playSongInternal(song);
+    } else {
+      play(song);
+    }
+  }, [play, playSongInternal, resetPlayedSongs]);
+
   const pause = useCallback(() => { playerRef.current?.pauseVideo?.(); }, []);
   const resume = useCallback(() => { playerRef.current?.playVideo?.(); }, []);
   const toggle = useCallback(() => { isPlaying ? pause() : resume(); }, [isPlaying, pause, resume]);
+  const togglePlay = toggle;
   const seek = useCallback((time: number) => {
     playerRef.current?.seekTo?.(time, true);
     setCurrentTime(time);
@@ -345,12 +364,55 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const toggleShuffle = useCallback(() => setShuffle((s) => !s), []);
   const toggleRepeat = useCallback(() => setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off")), []);
 
+  // -------- Persistent playback: restore on mount, save while playing --------
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = localStorage.getItem("jb:lastTrack");
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { songId: string; position: number };
+      if (!saved?.songId) return;
+      supabase.from("songs").select("*").eq("id", saved.songId).maybeSingle().then(({ data }) => {
+        if (!data) return;
+        setCurrentSong(data as Song);
+        setQueueState([data as Song]);
+        setQueueIndex(0);
+        // Load paused so audio doesn't auto-play on app open
+        const waitReady = setInterval(() => {
+          if (!playerReadyRef.current || !playerRef.current?.cueVideoById) return;
+          clearInterval(waitReady);
+          try {
+            playerRef.current.cueVideoById({
+              videoId: (data as Song).youtube_video_id,
+              startSeconds: Math.max(0, saved.position || 0),
+            });
+          } catch {}
+        }, 200);
+      });
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!currentSong) return;
+    const id = setInterval(() => {
+      try {
+        localStorage.setItem("jb:lastTrack", JSON.stringify({
+          songId: currentSong.id,
+          position: currentTime || 0,
+        }));
+      } catch {}
+    }, 5000);
+    return () => clearInterval(id);
+  }, [currentSong, currentTime]);
+
   return (
     <PlayerContext.Provider
       value={{
         currentSong, isPlaying, currentTime, duration, volume, queue, shuffle, repeat,
         crossfadeEnabled, crossfadeDuration, gaplessEnabled, playingFrom, playlistName, frequencyData,
-        play, pause, resume, toggle, seek, setVolume, next, previous,
+        play, playSong, pause, resume, toggle, togglePlay, seek, setVolume, next, previous,
         addToQueue, removeFromQueue, reorderQueue, clearQueue, setQueue,
         toggleShuffle, toggleRepeat,
         setCrossfadeEnabled: setCrossfadeEnabledState,
