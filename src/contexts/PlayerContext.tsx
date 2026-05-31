@@ -285,9 +285,26 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     playSongInternal(song);
   }, [queue, playSongInternal, resetPlayedSongs]);
 
+  // Compatibility alias used across the app: playSong(song, queueList?, playlistName?)
+  const playSong = useCallback((song: Song, queueSongs?: Song[], name?: string) => {
+    if (queueSongs && queueSongs.length > 0) {
+      const idx = Math.max(0, queueSongs.findIndex((s) => s.id === song.id));
+      setQueueState(queueSongs);
+      setQueueIndex(idx);
+      setPlaylistName(name ?? null);
+      setPlayingFrom(name ? "playlist" : "queue");
+      setCurrentSong(song);
+      resetPlayedSongs([song.id]);
+      playSongInternal(song);
+    } else {
+      play(song);
+    }
+  }, [play, playSongInternal, resetPlayedSongs]);
+
   const pause = useCallback(() => { playerRef.current?.pauseVideo?.(); }, []);
   const resume = useCallback(() => { playerRef.current?.playVideo?.(); }, []);
   const toggle = useCallback(() => { isPlaying ? pause() : resume(); }, [isPlaying, pause, resume]);
+  const togglePlay = toggle;
   const seek = useCallback((time: number) => {
     playerRef.current?.seekTo?.(time, true);
     setCurrentTime(time);
