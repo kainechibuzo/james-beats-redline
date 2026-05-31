@@ -19,9 +19,11 @@ interface PlayerContextType {
   playlistName: string | null;
   frequencyData: Uint8Array;
   play: (song: Song) => void;
+  playSong: (song: Song, queueSongs?: Song[], playlistName?: string) => void;
   pause: () => void;
   resume: () => void;
   toggle: () => void;
+  togglePlay: () => void;
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
   next: () => void;
