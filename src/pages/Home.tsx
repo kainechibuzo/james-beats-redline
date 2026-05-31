@@ -26,25 +26,23 @@ const Home = () => {
 
   const recentAlbums = allAlbums?.slice(0, 6) || [];
 
-  // Your Recent Mix - shuffle recently played songs into a "mix"
-  const recentMix = recentlyPlayed && recentlyPlayed.length > 2
-    ? [...recentlyPlayed].sort(() => Math.random() - 0.5).slice(0, 6)
-    : null;
+  // Stable "Recent Mix" — memoized so it doesn't reshuffle on every render (was causing flashing)
+  const recentMix = useMemo(() => {
+    if (!recentlyPlayed || recentlyPlayed.length <= 2) return null;
+    // Deterministic ordering: most recent first, take 6
+    return recentlyPlayed.slice(0, 6);
+  }, [recentlyPlayed]);
 
-  // Your Throwbacks - songs older than 60 days from recently played or oldest songs
-  const throwbacks = (() => {
+  // Stable Throwbacks — memoized
+  const throwbacks = useMemo(() => {
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    
     if (songs && songs.length > 0) {
-      const oldSongs = songs
-        .filter(s => new Date(s.created_at) < sixtyDaysAgo)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 6);
+      const oldSongs = songs.filter(s => new Date(s.created_at) < sixtyDaysAgo).slice(0, 6);
       return oldSongs.length > 0 ? oldSongs : songs.slice(-6).reverse();
     }
     return null;
-  })();
+  }, [songs]);
 
   const handlePlayAlbum = (albumTitle: string, artistName: string) => {
     const albumSongs = songs?.filter(
