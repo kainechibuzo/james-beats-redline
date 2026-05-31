@@ -118,9 +118,7 @@ const App = () => {
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/explore" element={<Explore />} />
-                    <Route path="/radio" element={<Radio />} />
                     <Route path="/podcasts" element={<Podcasts />} />
-                    <Route path="/live" element={<Live />} />
                     <Route path="/mixes" element={<Mixes />} />
                     <Route path="/mixes/:id" element={<MixDetail />} />
                   </Route>
