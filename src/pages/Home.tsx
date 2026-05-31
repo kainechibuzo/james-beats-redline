@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import HeroSection from "@/components/home/HeroSection";
 import SongCard from "@/components/home/SongCard";
