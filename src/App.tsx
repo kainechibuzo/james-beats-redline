@@ -33,6 +33,7 @@ import Explore from "./pages/Explore";
 import Podcasts from "./pages/Podcasts";
 import Mixes from "./pages/Mixes";
 import MixDetail from "./pages/MixDetail";
+import AOD from "./pages/AOD";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => {
                     <Route path="/" element={<Welcome />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/terms" element={<Terms />} />
+                    <Route path="/aod" element={<AOD />} />
                     <Route element={<MainLayout />}>
                     <Route path="/home" element={<Home />} />
                     <Route path="/search" element={<Search />} />
