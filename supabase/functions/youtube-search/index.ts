@@ -24,11 +24,20 @@ const yt = async (path: string, params: Record<string, string>) => {
   return res.json();
 };
 
+const isOfficialChannel = (channelTitle: string, query: string): boolean => {
+  const c = (channelTitle || "").toLowerCase();
+  if (c.endsWith("- topic")) return true;
+  if (c.includes("vevo")) return true;
+  const q = query.toLowerCase().trim();
+  if (q && c.includes(q)) return true;
+  return false;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     if (!YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY missing");
-    const { query, maxResults = 15 } = await req.json().catch(() => ({}));
+    const { query, maxResults = 15, officialOnly = false } = await req.json().catch(() => ({}));
     if (!query || typeof query !== "string") {
       return new Response(JSON.stringify({ error: "query required" }), {
         status: 400,
@@ -36,12 +45,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    const fetchCount = officialOnly ? 50 : Math.min(Math.max(maxResults, 1), 25);
+
     const search = await yt("search", {
       part: "id",
       q: query,
       type: "video",
       videoCategoryId: "10",
-      maxResults: String(Math.min(Math.max(maxResults, 1), 25)),
+      maxResults: String(fetchCount),
     });
     const ids = (search.items ?? [])
       .map((i: any) => i.id?.videoId)
