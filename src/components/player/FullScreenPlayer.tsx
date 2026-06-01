@@ -162,15 +162,19 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
               <div className="flex items-center gap-2">
                 {/* Always-on Display indicator */}
                 {wakeLockSupported && (
-                  <div className={cn(
-                    "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
-                    wakeLockActive 
-                      ? "bg-primary/20 text-primary" 
-                      : "bg-muted/50 text-muted-foreground"
-                  )}>
+                  <button
+                    onClick={() => { onClose(); window.location.assign("/aod"); }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors",
+                      wakeLockActive
+                        ? "bg-primary/20 text-primary hover:bg-primary/30"
+                        : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                    )}
+                    title="Open Always-On Display"
+                  >
                     <Monitor className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Always On</span>
-                  </div>
+                  </button>
                 )}
                 <Button 
                   variant="ghost" 
