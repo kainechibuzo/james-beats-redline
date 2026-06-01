@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -23,6 +24,7 @@ interface FullScreenPlayerProps {
 }
 
 const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
+  const navigate = useNavigate();
   const {
     currentSong,
     isPlaying,
@@ -163,7 +165,7 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
                 {/* Always-on Display indicator */}
                 {wakeLockSupported && (
                   <button
-                    onClick={() => { onClose(); window.location.assign("/aod"); }}
+                    onClick={() => { onClose(); navigate("/aod"); }}
                     className={cn(
                       "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors",
                       wakeLockActive
