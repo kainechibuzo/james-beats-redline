@@ -36,6 +36,7 @@ import MixManagement from "@/components/admin/MixManagement";
 import IngestionSources from "@/components/admin/IngestionSources";
 import { Rss, Sparkles } from "lucide-react";
 import YouTubeSeeder from "@/components/admin/YouTubeSeeder";
+import YouTubePlaylistImporter from "@/components/admin/YouTubePlaylistImporter";
 import {
   LineChart,
   Line,
@@ -907,8 +908,9 @@ const Admin = () => {
           <IngestionSources />
         </TabsContent>
 
-        <TabsContent value="yt-seed">
+        <TabsContent value="yt-seed" className="space-y-6">
           <YouTubeSeeder />
+          <YouTubePlaylistImporter />
         </TabsContent>
       </Tabs>
     </div>
