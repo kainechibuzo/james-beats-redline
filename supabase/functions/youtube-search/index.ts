@@ -69,18 +69,22 @@ Deno.serve(async (req) => {
       id: ids.join(","),
     });
 
-    const rows = (details.items ?? []).map((item: any) => {
+    let rows = (details.items ?? []).map((item: any) => {
       const s = item.snippet ?? {};
       const thumbs = s.thumbnails ?? {};
       const thumbnail =
         thumbs.maxres?.url ?? thumbs.standard?.url ?? thumbs.high?.url ??
         thumbs.medium?.url ?? thumbs.default?.url ??
         `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
+      const channelTitle = s.channelTitle ?? "Unknown";
+      // Clean " - Topic" suffix for display
+      const artistName = channelTitle.replace(/\s*-\s*Topic\s*$/i, "").replace(/VEVO$/i, "").trim() || channelTitle;
       return {
+        _channelTitle: channelTitle,
         youtube_video_id: item.id,
         youtube_url: `https://www.youtube.com/watch?v=${item.id}`,
         title: s.title ?? "Untitled",
-        artist: s.channelTitle ?? "Unknown",
+        artist: artistName,
         thumbnail,
         cover_url: thumbnail,
         duration: parseDuration(item.contentDetails?.duration ?? "PT0S"),
@@ -91,16 +95,25 @@ Deno.serve(async (req) => {
       };
     });
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    await supabase.from("songs").upsert(rows, {
-      onConflict: "youtube_video_id",
-      ignoreDuplicates: true,
-    });
+    if (officialOnly) {
+      rows = rows.filter((r: any) => isOfficialChannel(r._channelTitle, query));
+    }
+    rows = rows.slice(0, Math.min(Math.max(maxResults, 1), 25));
+    const finalIds = rows.map((r: any) => r.youtube_video_id);
+    rows.forEach((r: any) => delete r._channelTitle);
 
-    const { data: songs } = await supabase
-      .from("songs")
-      .select("*")
-      .in("youtube_video_id", ids);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    if (rows.length > 0) {
+      await supabase.from("songs").upsert(rows, {
+        onConflict: "youtube_video_id",
+        ignoreDuplicates: true,
+      });
+    }
+
+    const { data: songs } = finalIds.length
+      ? await supabase.from("songs").select("*").in("youtube_video_id", finalIds)
+      : { data: [] as any[] };
+
 
     // Preserve YouTube relevance order
     const order = new Map(ids.map((id: string, i: number) => [id, i]));
