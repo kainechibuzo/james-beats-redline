@@ -18,10 +18,23 @@ const AOD = () => {
   useWakeLock(true);
 
   const [clock, setClock] = useState(new Date());
+  const [locked, setLocked] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
   useEffect(() => {
     const i = setInterval(() => setClock(new Date()), 1000);
     return () => clearInterval(i);
   }, []);
+
+  // Double-tap to unlock
+  useEffect(() => {
+    if (tapCount === 0) return;
+    const t = setTimeout(() => setTapCount(0), 400);
+    if (tapCount >= 2) {
+      setLocked(false);
+      setTapCount(0);
+    }
+    return () => clearTimeout(t);
+  }, [tapCount]);
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
