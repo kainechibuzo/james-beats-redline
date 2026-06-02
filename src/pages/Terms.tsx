@@ -59,23 +59,29 @@ const Terms = () => {
 
     try {
       const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
-      const fallbackName =
-        meta.display_name || meta.username || user.email?.split("@")[0] || "User";
+      const nowIso = new Date().toISOString();
 
-      // Upsert ensures we never fail if the profile row already exists or is missing.
-      const { error: upsertError } = await supabase
+      // Try updating the existing profile first — never touch username (it's unique).
+      const { data: updated, error: updateError } = await supabase
         .from("profiles")
-        .upsert(
-          {
-            user_id: user.id,
-            display_name: fallbackName,
-            username: meta.username || user.email?.split("@")[0] || null,
-            terms_accepted_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        );
+        .update({ terms_accepted_at: nowIso })
+        .eq("user_id", user.id)
+        .select("user_id")
+        .maybeSingle();
 
-      if (upsertError) throw upsertError;
+      if (updateError) throw updateError;
+
+      // If no row existed, create one. Leave username NULL to avoid unique-key collisions.
+      if (!updated) {
+        const fallbackName =
+          meta.display_name || meta.username || user.email?.split("@")[0] || "User";
+        const { error: insertError } = await supabase.from("profiles").insert({
+          user_id: user.id,
+          display_name: fallbackName,
+          terms_accepted_at: nowIso,
+        });
+        if (insertError) throw insertError;
+      }
 
       toast.success("Welcome to James Beats");
       navigate("/home", { replace: true });
