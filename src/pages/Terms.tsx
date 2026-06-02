@@ -1,55 +1,56 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Music, FileText, Shield, Users, AlertCircle, ChevronUp } from "lucide-react";
+import { Music, Shield, Sparkles, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+
+const sections = [
+  {
+    icon: Shield,
+    title: "Content & Ownership",
+    body: "Songs you upload become jointly owned by you and James Beats. You grant us a worldwide, royalty-free, perpetual license to host, stream, distribute and promote that content.",
+  },
+  {
+    icon: Lock,
+    title: "Your Responsibilities",
+    body: "You confirm you have rights to anything you upload, it doesn't infringe on others, and you won't try to bypass platform protections or scrape others' content.",
+  },
+  {
+    icon: Sparkles,
+    title: "Platform Rights",
+    body: "James Beats may feature, sublicense, remix or remove content at any time. Even after account closure, the license you granted continues for archival, legal and promotional use.",
+  },
+];
 
 const Terms = () => {
   const [accepted, setAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  const [scrollRef, setScrollRef] = useState<HTMLDivElement | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Check if user already accepted terms
   useEffect(() => {
     if (!user) return;
-
-    const checkTermsStatus = async () => {
-      try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("terms_accepted_at")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (data?.terms_accepted_at) {
-          // User already accepted, skip to home
-          navigate("/home", { replace: true });
-        }
-      } catch (err) {
-        console.error("Error checking terms status:", err);
-      }
-    };
-
-    checkTermsStatus();
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("terms_accepted_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.terms_accepted_at) navigate("/home", { replace: true });
+    })();
   }, [user, navigate]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const element = e.currentTarget;
-    const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 50;
-    setHasScrolledToBottom(isNearBottom || element.scrollHeight - element.scrollTop === element.clientHeight);
-  };
-
   const handleAccept = async () => {
-    if (!accepted || !user) {
-      setError("Please accept the terms to continue");
+    if (!user) {
+      setError("Please sign in again to continue.");
+      return;
+    }
+    if (!accepted) {
+      setError("Please tick the box to confirm you agree.");
       return;
     }
 
@@ -57,252 +58,128 @@ const Terms = () => {
     setError(null);
 
     try {
-      // First, ensure the profile exists
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
+      const fallbackName =
+        meta.display_name || meta.username || user.email?.split("@")[0] || "User";
 
-      if (!existingProfile) {
-        // Create profile if it doesn't exist
-        const { error: createError } = await supabase
-          .from("profiles")
-          .insert({
+      // Upsert ensures we never fail if the profile row already exists or is missing.
+      const { error: upsertError } = await supabase
+        .from("profiles")
+        .upsert(
+          {
             user_id: user.id,
-            display_name:
-              (user.user_metadata as any)?.display_name ??
-              (user.user_metadata as any)?.username ??
-              user.email?.split("@")[0] ??
-              "User",
-            username:
-              (user.user_metadata as any)?.username ??
-              user.email?.split("@")[0] ??
-              null,
-          });
+            display_name: fallbackName,
+            username: meta.username || user.email?.split("@")[0] || null,
+            terms_accepted_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
 
-        if (createError) throw createError;
-      }
+      if (upsertError) throw upsertError;
 
-      // Now update with terms acceptance
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          terms_accepted_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
-
-      if (updateError) throw updateError;
-
-      toast.success("Welcome to James Beats!");
-      
-      // Force a small delay to ensure database is updated
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      toast.success("Welcome to James Beats");
       navigate("/home", { replace: true });
     } catch (err) {
-      console.error("Error accepting terms:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to accept terms";
-      setError(errorMessage);
-      toast.error(`Error: ${errorMessage}`);
+      const msg = err instanceof Error ? err.message : "Failed to accept terms";
+      console.error("Terms accept failed:", err);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSkip = () => {
-    // Allow users to skip and try again later
-    toast.info("You can accept terms anytime from settings");
-    navigate("/home", { replace: true });
-  };
-
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        {/* Logo */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-full mb-4">
-            <Music className="w-8 h-8 text-primary" />
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-primary/5 blur-3xl" />
+
+      <div className="relative mx-auto max-w-3xl px-5 py-10 sm:py-16">
+        {/* Header */}
+        <div className="flex flex-col items-center text-center mb-10">
+          <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
+            <Music className="w-7 h-7 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            James Beats
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Before we drop the needle
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Please review and accept our terms before continuing
+          <p className="mt-3 text-muted-foreground max-w-md">
+            A quick agreement so we can keep the music, uploads, and discovery flowing.
           </p>
         </div>
 
-        {/* Terms Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-glow">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-semibold">Terms of Use & User Agreement</h2>
-          </div>
-
-          <ScrollArea className="h-[400px] pr-4" onScroll={handleScroll}>
-            <div 
-              ref={setScrollRef}
-              className="space-y-6 text-sm text-muted-foreground"
+        {/* Sections */}
+        <div className="grid gap-4 sm:gap-5">
+          {sections.map((s) => (
+            <div
+              key={s.title}
+              className="group rounded-2xl border border-border bg-card/60 backdrop-blur p-5 sm:p-6 hover:border-primary/40 transition-colors"
             >
-              <section>
-                <h3 className="text-foreground font-semibold mb-2 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-primary" />
-                  1. Content Ownership & Rights
-                </h3>
-                <p className="mb-2">
-                  By uploading any audio content ("Content") to James Beats, you acknowledge and agree to the following:
-                </p>
-                <ul className="list-disc pl-5 space-y-2">
-                  <li>
-                    <strong className="text-foreground">Joint Ownership:</strong> Any song, audio track, or musical content you upload becomes the joint property of both you (the "Uploader") and James Beats (the "Platform"). This means both parties retain equal rights to use, distribute, license, and monetize the Content.
-                  </li>
-                  <li>
-                    <strong className="text-foreground">License Grant:</strong> You grant James Beats a worldwide, non-exclusive, royalty-free, perpetual, and irrevocable license to use, reproduce, modify, adapt, publish, translate, distribute, perform, and display such Content.
-                  </li>
-                  <li>
-                    <strong className="text-foreground">Revenue Sharing:</strong> Any revenue generated from your Content may be shared between you and James Beats according to the platform's current revenue sharing policies.
-                  </li>
-                </ul>
-              </section>
-
-              <section>
-                <h3 className="text-foreground font-semibold mb-2 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primary" />
-                  2. User Responsibilities
-                </h3>
-                <ul className="list-disc pl-5 space-y-2">
-                  <li>
-                    You warrant that you have the legal right to upload and share the Content, and that it does not infringe on any third-party intellectual property rights.
-                  </li>
-                  <li>
-                    You are solely responsible for any Content you upload and any consequences thereof.
-                  </li>
-                  <li>
-                    You agree not to upload any Content that is illegal, harmful, threatening, abusive, defamatory, or otherwise objectionable.
-                  </li>
-                  <li>
-                    You will not attempt to circumvent any security measures or download/steal other users' Content.
-                  </li>
-                </ul>
-              </section>
-
-              <section>
-                <h3 className="text-foreground font-semibold mb-2">3. Platform Rights</h3>
-                <ul className="list-disc pl-5 space-y-2">
-                  <li>
-                    James Beats reserves the right to remove any Content at its sole discretion, without prior notice.
-                  </li>
-                  <li>
-                    The Platform may use uploaded Content for promotional purposes, including but not limited to advertisements, social media, and marketing materials.
-                  </li>
-                  <li>
-                    James Beats may sublicense the Content to third parties for streaming, distribution, or other commercial purposes.
-                  </li>
-                </ul>
-              </section>
-
-              <section>
-                <h3 className="text-foreground font-semibold mb-2">4. Content Protection</h3>
-                <ul className="list-disc pl-5 space-y-2">
-                  <li>
-                    James Beats implements technical measures to protect Content from unauthorized downloading and distribution.
-                  </li>
-                  <li>
-                    Users who attempt to circumvent these protections will have their accounts terminated.
-                  </li>
-                  <li>
-                    Any unauthorized use of Content may result in legal action.
-                  </li>
-                </ul>
-              </section>
-
-              <section>
-                <h3 className="text-foreground font-semibold mb-2">5. Termination</h3>
-                <p>
-                  Even if your account is terminated, the joint ownership and license rights granted to James Beats shall survive and remain in effect. You may request removal of your Content, but James Beats reserves the right to maintain copies for archival and legal purposes.
-                </p>
-              </section>
-
-              <section>
-                <h3 className="text-foreground font-semibold mb-2">6. Disclaimer</h3>
-                <p>
-                  THE PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. JAMES BEATS DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-                </p>
-              </section>
-
-              <section>
-                <h3 className="text-foreground font-semibold mb-2">7. Amendments</h3>
-                <p>
-                  James Beats reserves the right to modify these terms at any time. Continued use of the platform after changes constitutes acceptance of the new terms.
-                </p>
-              </section>
-
-              <section className="bg-muted/50 p-4 rounded-lg border border-border">
-                <p className="text-foreground font-medium">
-                  By clicking "I Accept," you confirm that you have read, understood, and agree to be bound by these Terms of Use and User Agreement.
-                </p>
-              </section>
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                  <s.icon className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base sm:text-lg">{s.title}</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                    {s.body}
+                  </p>
+                </div>
+              </div>
             </div>
-          </ScrollArea>
+          ))}
+        </div>
 
-          {/* Scroll indicator */}
-          {!hasScrolledToBottom && (
-            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <ChevronUp className="w-4 h-4 animate-bounce" />
-              Scroll to bottom to continue
-            </div>
-          )}
+        {/* Accept block */}
+        <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-5 sm:p-6">
+          <label
+            htmlFor="accept-terms"
+            className="flex items-start gap-3 cursor-pointer select-none"
+          >
+            <Checkbox
+              id="accept-terms"
+              checked={accepted}
+              onCheckedChange={(c) => {
+                setAccepted(c === true);
+                setError(null);
+              }}
+              disabled={isLoading}
+              className="mt-1"
+            />
+            <span className="text-sm leading-relaxed">
+              I've read and agree to the{" "}
+              <span className="text-foreground font-medium">Terms of Use</span> and joint
+              content license. I understand this is binding and survives account closure.
+            </span>
+          </label>
 
-          {/* Error message */}
           {error && (
-            <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-start gap-2">
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
               <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
               <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
-          <div className="mt-6 space-y-4">
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="accept-terms"
-                checked={accepted}
-                onCheckedChange={(checked) => {
-                  setAccepted(checked === true);
-                  setError(null);
-                }}
-                disabled={isLoading}
-              />
-              <label
-                htmlFor="accept-terms"
-                className="text-sm font-medium leading-none cursor-pointer"
-              >
-                I have read and agree to the Terms of Use and User Agreement
-              </label>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                variant="glow"
-                className="flex-1"
-                disabled={!accepted || isLoading}
-                onClick={handleAccept}
-              >
-                {isLoading ? "Processing..." : "I Accept - Continue"}
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                disabled={isLoading}
-                onClick={handleSkip}
-              >
-                Skip for Now
-              </Button>
-            </div>
-          </div>
+          <Button
+            variant="glow"
+            size="lg"
+            className="mt-5 w-full"
+            disabled={!accepted || isLoading}
+            onClick={handleAccept}
+          >
+            {isLoading ? (
+              "Saving…"
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4 mr-2" /> Accept & Enter
+              </>
+            )}
+          </Button>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-4">
-          Last updated: January 2026
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          Last updated June 2026
         </p>
       </div>
     </div>

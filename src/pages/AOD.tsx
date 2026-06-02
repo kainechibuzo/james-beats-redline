@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Play, Pause, SkipBack, SkipForward, X } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, X, Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -18,15 +18,31 @@ const AOD = () => {
   useWakeLock(true);
 
   const [clock, setClock] = useState(new Date());
+  const [locked, setLocked] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
   useEffect(() => {
     const i = setInterval(() => setClock(new Date()), 1000);
     return () => clearInterval(i);
   }, []);
 
+  // Double-tap to unlock
+  useEffect(() => {
+    if (tapCount === 0) return;
+    const t = setTimeout(() => setTapCount(0), 400);
+    if (tapCount >= 2) {
+      setLocked(false);
+      setTapCount(0);
+    }
+    return () => clearTimeout(t);
+  }, [tapCount]);
+
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black text-foreground flex flex-col items-center justify-between p-6 overflow-hidden">
+    <div
+      className="fixed inset-0 z-[100] bg-black text-foreground flex flex-col items-center justify-between p-6 overflow-hidden"
+      onClick={() => locked && setTapCount((c) => c + 1)}
+    >
       {/* Ambient background */}
       {currentSong?.thumbnail && (
         <div
@@ -39,14 +55,26 @@ const AOD = () => {
         />
       )}
 
-      {/* Close */}
+      {/* Top bar */}
       <div className="relative w-full flex justify-between items-start z-10">
         <div className="text-sm opacity-60">
           {clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Close">
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); setLocked((l) => !l); }}
+            aria-label={locked ? "Unlock" : "Lock"}
+          >
+            {locked ? <Lock className="w-5 h-5 text-primary" /> : <Unlock className="w-5 h-5" />}
+          </Button>
+          {!locked && (
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Close">
+              <X className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Album/Video area — YouTube iframe pins here via data-yt-anchor */}
@@ -79,7 +107,9 @@ const AOD = () => {
       </div>
 
       {/* Controls */}
-      <div className="relative z-10 flex items-center gap-8 pb-8">
+      <div
+        className={`relative z-10 flex items-center gap-8 pb-8 transition-opacity ${locked ? "opacity-20 pointer-events-none" : "opacity-100"}`}
+      >
         <Button variant="ghost" size="icon" onClick={previous} className="w-14 h-14">
           <SkipBack className="w-7 h-7" />
         </Button>
@@ -96,6 +126,12 @@ const AOD = () => {
           <SkipForward className="w-7 h-7" />
         </Button>
       </div>
+
+      {locked && (
+        <div className="absolute bottom-4 left-0 right-0 text-center text-xs opacity-50 z-10 pointer-events-none">
+          Locked — double-tap to unlock
+        </div>
+      )}
     </div>
   );
 };
