@@ -39,7 +39,10 @@ const AOD = () => {
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black text-foreground flex flex-col items-center justify-between p-6 overflow-hidden">
+    <div
+      className="fixed inset-0 z-[100] bg-black text-foreground flex flex-col items-center justify-between p-6 overflow-hidden"
+      onClick={() => locked && setTapCount((c) => c + 1)}
+    >
       {/* Ambient background */}
       {currentSong?.thumbnail && (
         <div
@@ -52,14 +55,26 @@ const AOD = () => {
         />
       )}
 
-      {/* Close */}
+      {/* Top bar */}
       <div className="relative w-full flex justify-between items-start z-10">
         <div className="text-sm opacity-60">
           {clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Close">
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); setLocked((l) => !l); }}
+            aria-label={locked ? "Unlock" : "Lock"}
+          >
+            {locked ? <Lock className="w-5 h-5 text-primary" /> : <Unlock className="w-5 h-5" />}
+          </Button>
+          {!locked && (
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Close">
+              <X className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Album/Video area — YouTube iframe pins here via data-yt-anchor */}
