@@ -107,7 +107,9 @@ const AOD = () => {
       </div>
 
       {/* Controls */}
-      <div className="relative z-10 flex items-center gap-8 pb-8">
+      <div
+        className={`relative z-10 flex items-center gap-8 pb-8 transition-opacity ${locked ? "opacity-20 pointer-events-none" : "opacity-100"}`}
+      >
         <Button variant="ghost" size="icon" onClick={previous} className="w-14 h-14">
           <SkipBack className="w-7 h-7" />
         </Button>
@@ -124,6 +126,12 @@ const AOD = () => {
           <SkipForward className="w-7 h-7" />
         </Button>
       </div>
+
+      {locked && (
+        <div className="absolute bottom-4 left-0 right-0 text-center text-xs opacity-50 z-10 pointer-events-none">
+          Locked — double-tap to unlock
+        </div>
+      )}
     </div>
   );
 };
