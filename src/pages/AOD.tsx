@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Play, Pause, SkipBack, SkipForward, X } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, X, Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useWakeLock } from "@/hooks/useWakeLock";
