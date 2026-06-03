@@ -106,7 +106,9 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
     <>
       <div 
         className={`group bg-card rounded-lg hover:bg-card/80 transition-all duration-200 cursor-pointer ${isSmall ? 'p-2' : 'p-3 md:p-4'}`}
-        onClick={handlePlay}
+        onClick={handleCardClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div className={`relative ${isSmall ? 'mb-1.5' : 'mb-2 md:mb-3'}`}>
           <img
