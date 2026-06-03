@@ -217,7 +217,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const apply = () => {
       const host = document.getElementById(YT_PLAYER_DIV_ID);
       if (!host) return;
-      const anchor = document.querySelector('[data-yt-anchor="cover"]') as HTMLElement | null;
+      // Prefer anchors marked with a higher priority (e.g. AOD fullscreen)
+      const anchors = Array.from(
+        document.querySelectorAll('[data-yt-anchor="cover"]')
+      ) as HTMLElement[];
+      const anchor = anchors.sort(
+        (a, b) =>
+          parseInt(b.dataset.ytPriority ?? "0", 10) -
+          parseInt(a.dataset.ytPriority ?? "0", 10)
+      )[0];
       if (!currentSong || !anchor) {
         host.style.display = "none";
         return;
@@ -228,6 +236,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       host.style.left = `${r.left}px`;
       host.style.width = `${r.width}px`;
       host.style.height = `${r.height}px`;
+      host.style.zIndex = anchor.dataset.ytZ ?? "55";
+      host.style.pointerEvents = anchor.dataset.ytInteractive === "true" ? "auto" : "none";
     };
     apply();
     const id = setInterval(apply, 400); // catches layout shifts cheaply
