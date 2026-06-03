@@ -81,6 +81,9 @@ const AOD = () => {
       <div className="relative z-10 flex flex-col items-center gap-6 flex-1 justify-center w-full max-w-md">
         <div
           data-yt-anchor="cover"
+          data-yt-priority="10"
+          data-yt-z="120"
+          data-yt-interactive="true"
           className="w-72 h-72 sm:w-80 sm:h-80 bg-black rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10"
           style={{
             backgroundImage: currentSong?.thumbnail ? `url(${currentSong.thumbnail})` : undefined,
