@@ -56,17 +56,33 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
 
   const isOwner = user?.id === song.user_id;
 
-  const lastTapRef = React.useRef<number>(0);
   const handlePlay = () => {
-    const now = Date.now();
-    if (now - lastTapRef.current < 300) {
-      lastTapRef.current = 0;
+    play(song);
+  };
+
+  // Left-swipe to add to queue (touch)
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  const swipedRef = React.useRef(false);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    swipedRef.current = false;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (dx < -50 && Math.abs(dy) < 40) {
+      swipedRef.current = true;
       addToQueue(song);
       toast.success(`Added "${song.title}" to queue`);
-      return;
     }
-    lastTapRef.current = now;
-    play(song);
+  };
+  const handleCardClick = () => {
+    if (swipedRef.current) { swipedRef.current = false; return; }
+    handlePlay();
   };
 
   const handleLike = (e: React.MouseEvent) => {
