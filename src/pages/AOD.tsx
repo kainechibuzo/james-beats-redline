@@ -21,7 +21,7 @@ const AOD = () => {
   const lastTapRef = useRef<number>(0);
 
   useEffect(() => {
-    const i = setInterval(() => setClock(new Date()), 1000);
+    const i = setInterval(() => setClock(new Date()), 60000);
     return () => clearInterval(i);
   }, []);
 
@@ -42,45 +42,32 @@ const AOD = () => {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black text-white/90 flex flex-col items-center justify-between p-8 overflow-hidden select-none"
+      className="fixed inset-0 z-[100] bg-black text-white/60 flex flex-col items-center justify-between p-8 overflow-hidden select-none"
       onClick={handleTap}
     >
       {/* Clock */}
       <div className="relative w-full text-center pt-4 z-10">
-        <div className="text-xs tracking-widest uppercase opacity-40">
+        <div className="text-xs tracking-widest uppercase opacity-30">
           {clock.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
         </div>
-        <div className="text-5xl font-extralight tracking-tight mt-1 opacity-80">
+        <div className="text-5xl font-extralight tracking-tight mt-1 opacity-50">
           {clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
       </div>
 
-      {/* Album / Video anchor */}
-      <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-sm">
-        <div
-          data-yt-anchor="cover"
-          data-yt-priority="10"
-          data-yt-z="120"
-          data-yt-interactive="false"
-          className="w-64 h-64 sm:w-72 sm:h-72 bg-neutral-950 rounded-xl overflow-hidden ring-1 ring-white/5"
-          style={{
-            backgroundImage: currentSong?.thumbnail ? `url(${currentSong.thumbnail})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-
+      {/* Song info — no cover art for battery saving */}
+      <div className="relative z-10 flex flex-col items-center gap-10 w-full max-w-sm">
         <div className="text-center w-full px-4">
-          <h1 className="text-xl font-light truncate">{currentSong?.title ?? "Nothing playing"}</h1>
-          <p className="text-sm opacity-50 truncate mt-1">{currentSong?.artist ?? "—"}</p>
+          <h1 className="text-lg font-light truncate opacity-70">{currentSong?.title ?? "Nothing playing"}</h1>
+          <p className="text-sm opacity-30 truncate mt-1">{currentSong?.artist ?? "—"}</p>
         </div>
 
         {/* Progress */}
         <div className="w-full px-4">
-          <div className="h-[2px] bg-white/10 rounded-full overflow-hidden">
-            <div className="h-full bg-white/60 transition-all" style={{ width: `${progress}%` }} />
+          <div className="h-[2px] bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full bg-white/30" style={{ width: `${progress}%` }} />
           </div>
-          <div className="flex justify-between text-[10px] opacity-40 mt-2 tabular-nums">
+          <div className="flex justify-between text-[10px] opacity-25 mt-2 tabular-nums">
             <span>{fmt(currentTime)}</span>
             <span>{fmt(duration)}</span>
           </div>
@@ -91,7 +78,7 @@ const AOD = () => {
       <div className="relative z-10 flex items-center gap-10 pb-6">
         <button
           onClick={(e) => { e.stopPropagation(); previous(); }}
-          className="opacity-60 hover:opacity-100 transition-opacity"
+          className="opacity-40 hover:opacity-70"
           aria-label="Previous"
         >
           <SkipBack className="w-6 h-6" />
@@ -99,14 +86,14 @@ const AOD = () => {
         <button
           onClick={(e) => { e.stopPropagation(); toggle(); }}
           disabled={!currentSong}
-          className="w-14 h-14 rounded-full border border-white/20 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity disabled:opacity-30"
+          className="w-14 h-14 rounded-full border border-white/10 flex items-center justify-center opacity-60 hover:opacity-90 disabled:opacity-20"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); next(); }}
-          className="opacity-60 hover:opacity-100 transition-opacity"
+          className="opacity-40 hover:opacity-70"
           aria-label="Next"
         >
           <SkipForward className="w-6 h-6" />
@@ -115,7 +102,7 @@ const AOD = () => {
 
       {/* Exit hint */}
       <div
-        className={`absolute bottom-2 left-0 right-0 text-center text-[10px] tracking-widest uppercase z-10 pointer-events-none transition-opacity duration-300 ${hint ? "opacity-60" : "opacity-20"}`}
+        className={`absolute bottom-2 left-0 right-0 text-center text-[10px] tracking-widest uppercase z-10 pointer-events-none transition-opacity duration-300 ${hint ? "opacity-40" : "opacity-10"}`}
       >
         Double-tap to exit
       </div>
