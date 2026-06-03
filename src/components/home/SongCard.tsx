@@ -56,7 +56,16 @@ const SongCard: React.FC<SongCardProps> = ({ song, showArtist = true, showAlbum 
 
   const isOwner = user?.id === song.user_id;
 
+  const lastTapRef = React.useRef<number>(0);
   const handlePlay = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      lastTapRef.current = 0;
+      addToQueue(song);
+      toast.success(`Added "${song.title}" to queue`);
+      return;
+    }
+    lastTapRef.current = now;
     play(song);
   };
 
