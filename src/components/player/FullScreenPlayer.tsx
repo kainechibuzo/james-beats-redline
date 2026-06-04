@@ -68,19 +68,14 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
   };
 
   const handleSwipe = useCallback((direction: "left" | "right" | "up" | "down") => {
+    // Only swipe-down closes; left/right skipping was removed to avoid accidental track changes.
     if (direction === "down") {
       onClose();
-    } else if (direction === "left") {
-      next();
-      toast.success("Skipped to next song");
-    } else if (direction === "right") {
-      previous();
-      toast.success("Previous song");
     } else if (direction === "up" && currentSong) {
       addToQueue(currentSong);
       toast.success("Added to queue");
     }
-  }, [onClose, next, previous, addToQueue, currentSong]);
+  }, [onClose, addToQueue, currentSong]);
 
   const { handleTouchStart, handleTouchEnd } = useSwipeGestures(handleSwipe, 60);
 
@@ -187,11 +182,9 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
               </div>
             </div>
 
-            {/* Gesture hints */}
+            {/* Gesture hint */}
             <div className="absolute top-20 left-1/2 -translate-x-1/2 flex gap-4 text-xs text-muted-foreground/60">
-              <span>← Prev</span>
-              <span>↓ Close</span>
-              <span>Next →</span>
+              <span>↓ Swipe down to close</span>
             </div>
 
             {/* Settings Panel */}
