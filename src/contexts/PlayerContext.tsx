@@ -42,7 +42,10 @@ interface PlayerContextType {
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
-const YT_PLAYER_DIV_ID = "jb-yt-player";
+const HOST_A_ID = "jb-yt-host-a";
+const HOST_B_ID = "jb-yt-host-b";
+const DIV_A_ID = "jb-yt-player-a";
+const DIV_B_ID = "jb-yt-player-b";
 
 // Singleton YouTube IFrame API loader
 let ytApiPromise: Promise<any> | null = null;
@@ -66,12 +69,22 @@ const loadYouTubeApi = (): Promise<any> => {
   return ytApiPromise;
 };
 
+type PlayerKey = "a" | "b";
+
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const trackPlay = useTrackPlay();
 
-  const playerRef = useRef<any>(null);
+  // Two YouTube players for true crossfade
+  const playersRef = useRef<{ a: any; b: any }>({ a: null, b: null });
+  const readyRef = useRef<{ a: boolean; b: boolean }>({ a: false, b: false });
+  const activeKeyRef = useRef<PlayerKey>("a");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Crossfade state
+  const crossfadingRef = useRef(false);
+  const crossfadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const crossfadeTargetSongIdRef = useRef<string | null>(null);
 
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -82,13 +95,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [queueIndex, setQueueIndex] = useState(-1);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<"off" | "one" | "all">("off");
-  const [crossfadeEnabled, setCrossfadeEnabledState] = useState(false);
-  const [crossfadeDuration, setCrossfadeDurationState] = useState(5);
+  const [crossfadeEnabled, setCrossfadeEnabledState] = useState(true);
+  const [crossfadeDuration, setCrossfadeDurationState] = useState(6);
   const [gaplessEnabled, setGaplessEnabledState] = useState(false);
   const [playingFrom, setPlayingFrom] = useState<"queue" | "playlist" | null>(null);
   const [playlistName, setPlaylistName] = useState<string | null>(null);
   const [frequencyData] = useState<Uint8Array>(new Uint8Array(64));
-  const [playerReady, setPlayerReady] = useState(false);
+  const [playersReadyTick, setPlayersReadyTick] = useState(0);
 
   // Refs to avoid stale closures
   const queueRef = useRef<Song[]>([]);
@@ -96,11 +109,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const playedSongIdsRef = useRef<Set<string>>(new Set());
   const repeatRef = useRef(repeat);
   const shuffleRef = useRef(shuffle);
-  const playerReadyRef = useRef(false);
+  const volumeRef = useRef(volume);
+  const crossfadeEnabledRef = useRef(crossfadeEnabled);
+  const crossfadeDurationRef = useRef(crossfadeDuration);
 
   useEffect(() => { queueRef.current = queue; queueIndexRef.current = queueIndex; }, [queue, queueIndex]);
   useEffect(() => { repeatRef.current = repeat; }, [repeat]);
   useEffect(() => { shuffleRef.current = shuffle; }, [shuffle]);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { crossfadeEnabledRef.current = crossfadeEnabled; }, [crossfadeEnabled]);
+  useEffect(() => { crossfadeDurationRef.current = crossfadeDuration; }, [crossfadeDuration]);
+
+  const getActive = () => playersRef.current[activeKeyRef.current];
+  const getInactive = () => playersRef.current[activeKeyRef.current === "a" ? "b" : "a"];
 
   const resetPlayedSongs = useCallback((songIds: string[] = []) => {
     playedSongIdsRef.current = new Set(songIds);
@@ -144,10 +165,69 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     await supabase.from("listening_activity").insert({ user_id: user.id, song_id: song.id, is_active: true });
   }, [user]);
 
+  // -------- Crossfade management --------
+  const cancelCrossfade = useCallback(() => {
+    if (crossfadeIntervalRef.current) {
+      clearInterval(crossfadeIntervalRef.current);
+      crossfadeIntervalRef.current = null;
+    }
+    crossfadingRef.current = false;
+    crossfadeTargetSongIdRef.current = null;
+    const inactive = getInactive();
+    try { inactive?.stopVideo?.(); } catch {}
+    try { getActive()?.setVolume?.(Math.round(volumeRef.current * 100)); } catch {}
+  }, []);
+
+  const completeCrossfade = useCallback((nextSong: Song, nextIndex: number) => {
+    const oldActive = getActive();
+    try { oldActive?.stopVideo?.(); } catch {}
+    activeKeyRef.current = activeKeyRef.current === "a" ? "b" : "a";
+    try { getActive()?.setVolume?.(Math.round(volumeRef.current * 100)); } catch {}
+    crossfadingRef.current = false;
+    crossfadeTargetSongIdRef.current = null;
+    if (crossfadeIntervalRef.current) {
+      clearInterval(crossfadeIntervalRef.current);
+      crossfadeIntervalRef.current = null;
+    }
+    setQueueIndex(nextIndex);
+    setCurrentSong(nextSong);
+    markSongAsPlayed(nextSong.id);
+    trackPlay.mutate(nextSong.id);
+    updateListeningActivity(nextSong);
+  }, [markSongAsPlayed, trackPlay, updateListeningActivity]);
+
+  const startCrossfade = useCallback((nextSong: Song, nextIndex: number) => {
+    const inactive = getInactive();
+    if (!inactive?.loadVideoById || !nextSong.youtube_video_id) return;
+    crossfadingRef.current = true;
+    crossfadeTargetSongIdRef.current = nextSong.id;
+    const dur = Math.max(1, crossfadeDurationRef.current);
+    const targetVol = Math.round(volumeRef.current * 100);
+    try {
+      inactive.loadVideoById({ videoId: nextSong.youtube_video_id, startSeconds: 0 });
+      inactive.setVolume(0);
+      inactive.playVideo();
+    } catch {}
+    const startTs = Date.now();
+    crossfadeIntervalRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTs) / 1000;
+      const r = Math.min(1, elapsed / dur);
+      try {
+        getActive()?.setVolume?.(Math.round((1 - r) * targetVol));
+        inactive.setVolume(Math.round(r * targetVol));
+      } catch {}
+      if (r >= 1) {
+        completeCrossfade(nextSong, nextIndex);
+      }
+    }, 100);
+  }, [completeCrossfade]);
+
+  // Handle natural end (when crossfade didn't run, e.g. disabled or unavailable next)
   const handleSongEnd = useCallback(() => {
+    if (crossfadingRef.current) return; // crossfade will handle the swap
     if (repeatRef.current === "one") {
-      playerRef.current?.seekTo(0, true);
-      playerRef.current?.playVideo();
+      const a = getActive();
+      try { a?.seekTo?.(0, true); a?.playVideo?.(); } catch {}
       return;
     }
     const nextIndex = getNextIndex();
@@ -157,7 +237,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         setQueueIndex(nextIndex);
         setCurrentSong(nextSong);
         markSongAsPlayed(nextSong.id);
-        playerRef.current?.loadVideoById(nextSong.youtube_video_id);
+        try { getActive()?.loadVideoById?.(nextSong.youtube_video_id); } catch {}
         trackPlay.mutate(nextSong.id);
         updateListeningActivity(nextSong);
         return;
@@ -169,55 +249,93 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const handleSongEndRef = useRef(handleSongEnd);
   useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
 
-  // Init YouTube player — overlays the album-cover slot inside the play bar
+  // Init both YouTube players
   useEffect(() => {
     let cancelled = false;
-    loadYouTubeApi().then((YT) => {
-      if (cancelled) return;
-      let host = document.getElementById(YT_PLAYER_DIV_ID);
+
+    const makeHost = (id: string) => {
+      let host = document.getElementById(id);
       if (!host) {
         host = document.createElement("div");
-        host.id = YT_PLAYER_DIV_ID;
+        host.id = id;
         host.style.position = "fixed";
-        host.style.zIndex = "55"; // above play bar (z-50) cover, below modals
+        host.style.zIndex = "55";
         host.style.background = "hsl(0 0% 0%)";
         host.style.borderRadius = "6px";
         host.style.overflow = "hidden";
-        host.style.pointerEvents = "none"; // let play-bar controls underneath stay clickable
+        host.style.pointerEvents = "none";
         host.style.display = "none";
+        host.style.top = "-9999px";
+        host.style.left = "-9999px";
+        host.style.width = "1px";
+        host.style.height = "1px";
+        const inner = document.createElement("div");
+        inner.id = id === HOST_A_ID ? DIV_A_ID : DIV_B_ID;
+        inner.style.width = "100%";
+        inner.style.height = "100%";
+        host.appendChild(inner);
         document.body.appendChild(host);
       }
-      playerRef.current = new YT.Player(YT_PLAYER_DIV_ID, {
-        height: "100%",
-        width: "100%",
-        playerVars: { autoplay: 0, controls: 0, modestbranding: 1, playsinline: 1, rel: 0 },
-        events: {
-          onReady: () => {
-            playerReadyRef.current = true;
-            setPlayerReady(true);
-            try { playerRef.current.setVolume(Math.round(volume * 100)); } catch {}
+      return host;
+    };
+
+    loadYouTubeApi().then((YT) => {
+      if (cancelled) return;
+      makeHost(HOST_A_ID);
+      makeHost(HOST_B_ID);
+
+      const buildPlayer = (key: PlayerKey, divId: string) =>
+        new YT.Player(divId, {
+          height: "100%",
+          width: "100%",
+          playerVars: { autoplay: 0, controls: 0, modestbranding: 1, playsinline: 1, rel: 0 },
+          events: {
+            onReady: () => {
+              readyRef.current[key] = true;
+              setPlayersReadyTick((t) => t + 1);
+              try { playersRef.current[key]?.setVolume(0); } catch {}
+              if (key === activeKeyRef.current) {
+                try { playersRef.current[key]?.setVolume(Math.round(volumeRef.current * 100)); } catch {}
+              }
+            },
+            onStateChange: (e: any) => {
+              if (key !== activeKeyRef.current) return; // ignore inactive player events
+              const state = e.data;
+              if (state === YT.PlayerState.PLAYING) setIsPlaying(true);
+              else if (state === YT.PlayerState.PAUSED) setIsPlaying(false);
+              else if (state === YT.PlayerState.ENDED) handleSongEndRef.current();
+            },
+            onError: (err: any) => console.error("YT player error", key, err?.data),
           },
-          onStateChange: (e: any) => {
-            const state = e.data;
-            if (state === YT.PlayerState.PLAYING) setIsPlaying(true);
-            else if (state === YT.PlayerState.PAUSED) setIsPlaying(false);
-            else if (state === YT.PlayerState.ENDED) handleSongEndRef.current();
-          },
-          onError: (e: any) => console.error("YT player error", e?.data),
-        },
-      });
+        });
+
+      playersRef.current.a = buildPlayer("a", DIV_A_ID);
+      playersRef.current.b = buildPlayer("b", DIV_B_ID);
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pin host onto whichever element has data-yt-anchor="cover" in the play bar.
-  // Re-position on resize, scroll, route change, and when current song toggles.
+  // Pin the ACTIVE host onto whichever element has data-yt-anchor="cover".
+  // Inactive host is parked offscreen (only audible).
   useEffect(() => {
     const apply = () => {
-      const host = document.getElementById(YT_PLAYER_DIV_ID);
-      if (!host) return;
-      // Prefer anchors marked with a higher priority (e.g. AOD fullscreen)
+      const hostA = document.getElementById(HOST_A_ID);
+      const hostB = document.getElementById(HOST_B_ID);
+      if (!hostA || !hostB) return;
+
+      const activeHost = activeKeyRef.current === "a" ? hostA : hostB;
+      const inactiveHost = activeKeyRef.current === "a" ? hostB : hostA;
+
+      // Park inactive offscreen but keep playable
+      inactiveHost.style.display = "block";
+      inactiveHost.style.top = "-9999px";
+      inactiveHost.style.left = "-9999px";
+      inactiveHost.style.width = "1px";
+      inactiveHost.style.height = "1px";
+      inactiveHost.style.zIndex = "0";
+      inactiveHost.style.pointerEvents = "none";
+
       const anchors = Array.from(
         document.querySelectorAll('[data-yt-anchor="cover"]')
       ) as HTMLElement[];
@@ -226,21 +344,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           parseInt(b.dataset.ytPriority ?? "0", 10) -
           parseInt(a.dataset.ytPriority ?? "0", 10)
       )[0];
+
       if (!currentSong || !anchor) {
-        host.style.display = "none";
+        activeHost.style.display = "none";
         return;
       }
       const r = anchor.getBoundingClientRect();
-      host.style.display = "block";
-      host.style.top = `${r.top}px`;
-      host.style.left = `${r.left}px`;
-      host.style.width = `${r.width}px`;
-      host.style.height = `${r.height}px`;
-      host.style.zIndex = anchor.dataset.ytZ ?? "55";
-      host.style.pointerEvents = anchor.dataset.ytInteractive === "true" ? "auto" : "none";
+      activeHost.style.display = "block";
+      activeHost.style.top = `${r.top}px`;
+      activeHost.style.left = `${r.left}px`;
+      activeHost.style.width = `${r.width}px`;
+      activeHost.style.height = `${r.height}px`;
+      activeHost.style.zIndex = anchor.dataset.ytZ ?? "55";
+      activeHost.style.pointerEvents = anchor.dataset.ytInteractive === "true" ? "auto" : "none";
     };
     apply();
-    const id = setInterval(apply, 400); // catches layout shifts cheaply
+    const id = setInterval(apply, 250);
     window.addEventListener("resize", apply);
     window.addEventListener("scroll", apply, true);
     return () => {
@@ -248,22 +367,40 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener("resize", apply);
       window.removeEventListener("scroll", apply, true);
     };
-  }, [currentSong, playerReady]);
+  }, [currentSong, playersReadyTick]);
 
-  // Poll time/duration
+  // Poll time/duration on the ACTIVE player + trigger crossfade preload
   useEffect(() => {
     pollRef.current = setInterval(() => {
-      const p = playerRef.current;
+      const p = getActive();
       if (!p || typeof p.getCurrentTime !== "function") return;
       try {
         const t = p.getCurrentTime();
         const d = p.getDuration();
         if (!Number.isNaN(t)) setCurrentTime(t);
         if (!Number.isNaN(d)) setDuration(d);
+
+        // Crossfade trigger: load next track before the current one ends.
+        if (
+          crossfadeEnabledRef.current &&
+          !crossfadingRef.current &&
+          d > 0 &&
+          repeatRef.current !== "one" &&
+          (d - t) <= crossfadeDurationRef.current &&
+          (d - t) > 0.2
+        ) {
+          const nextIndex = getNextIndex();
+          if (nextIndex !== -1) {
+            const nextSong = queueRef.current[nextIndex];
+            if (nextSong?.youtube_video_id) {
+              startCrossfade(nextSong, nextIndex);
+            }
+          }
+        }
       } catch {}
-    }, 500);
+    }, 250);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
+  }, [getNextIndex, startCrossfade]);
 
 
   const playSongInternal = useCallback((song: Song) => {
@@ -271,14 +408,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       console.warn("Song has no youtube_video_id; cannot play", song);
       return;
     }
+    cancelCrossfade();
     markSongAsPlayed(song.id);
-    if (playerReadyRef.current && playerRef.current?.loadVideoById) {
-      playerRef.current.loadVideoById(song.youtube_video_id);
-      try { playerRef.current.setVolume(Math.round(volume * 100)); } catch {}
+    const a = getActive();
+    if (readyRef.current[activeKeyRef.current] && a?.loadVideoById) {
+      try {
+        a.loadVideoById(song.youtube_video_id);
+        a.setVolume(Math.round(volumeRef.current * 100));
+      } catch {}
     }
     trackPlay.mutate(song.id);
     updateListeningActivity(song);
-  }, [markSongAsPlayed, trackPlay, updateListeningActivity, volume]);
+  }, [cancelCrossfade, markSongAsPlayed, trackPlay, updateListeningActivity]);
 
   const play = useCallback((song: Song) => {
     setCurrentSong(song);
@@ -295,7 +436,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     playSongInternal(song);
   }, [queue, playSongInternal, resetPlayedSongs]);
 
-  // Compatibility alias used across the app: playSong(song, queueList?, playlistName?)
   const playSong = useCallback((song: Song, queueSongs?: Song[], name?: string) => {
     if (queueSongs && queueSongs.length > 0) {
       const idx = Math.max(0, queueSongs.findIndex((s) => s.id === song.id));
@@ -311,17 +451,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [play, playSongInternal, resetPlayedSongs]);
 
-  const pause = useCallback(() => { playerRef.current?.pauseVideo?.(); }, []);
-  const resume = useCallback(() => { playerRef.current?.playVideo?.(); }, []);
+  const pause = useCallback(() => { getActive()?.pauseVideo?.(); }, []);
+  const resume = useCallback(() => { getActive()?.playVideo?.(); }, []);
   const toggle = useCallback(() => { isPlaying ? pause() : resume(); }, [isPlaying, pause, resume]);
   const togglePlay = toggle;
   const seek = useCallback((time: number) => {
-    playerRef.current?.seekTo?.(time, true);
+    cancelCrossfade();
+    getActive()?.seekTo?.(time, true);
     setCurrentTime(time);
-  }, []);
+  }, [cancelCrossfade]);
   const setVolume = useCallback((vol: number) => {
     setVolumeState(vol);
-    try { playerRef.current?.setVolume?.(Math.round(vol * 100)); } catch {}
+    try { getActive()?.setVolume?.(Math.round(vol * 100)); } catch {}
   }, []);
 
   const next = useCallback(() => {
@@ -374,7 +515,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const toggleShuffle = useCallback(() => setShuffle((s) => !s), []);
   const toggleRepeat = useCallback(() => setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off")), []);
 
-  // -------- Persistent playback: restore on mount, save while playing --------
+  // -------- Persistent playback --------
   const restoredRef = useRef(false);
   useEffect(() => {
     if (restoredRef.current) return;
@@ -389,12 +530,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         setCurrentSong(data as Song);
         setQueueState([data as Song]);
         setQueueIndex(0);
-        // Load paused so audio doesn't auto-play on app open
         const waitReady = setInterval(() => {
-          if (!playerReadyRef.current || !playerRef.current?.cueVideoById) return;
+          const a = getActive();
+          if (!readyRef.current[activeKeyRef.current] || !a?.cueVideoById) return;
           clearInterval(waitReady);
           try {
-            playerRef.current.cueVideoById({
+            a.cueVideoById({
               videoId: (data as Song).youtube_video_id,
               startSeconds: Math.max(0, saved.position || 0),
             });
