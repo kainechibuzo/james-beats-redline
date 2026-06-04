@@ -341,14 +341,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const activeHost = activeKeyRef.current === "a" ? hostA : hostB;
       const inactiveHost = activeKeyRef.current === "a" ? hostB : hostA;
 
-      // Park inactive offscreen but keep playable
+      // Park inactive on-screen with real pixel size but visually hidden.
+      // Mobile browsers refuse to play 1px / offscreen videos, which would break the crossfade preload.
       inactiveHost.style.display = "block";
-      inactiveHost.style.top = "-9999px";
-      inactiveHost.style.left = "-9999px";
-      inactiveHost.style.width = "1px";
-      inactiveHost.style.height = "1px";
+      inactiveHost.style.position = "fixed";
+      inactiveHost.style.top = "0px";
+      inactiveHost.style.left = "0px";
+      inactiveHost.style.width = "160px";
+      inactiveHost.style.height = "90px";
+      inactiveHost.style.opacity = "0.001";
       inactiveHost.style.zIndex = "0";
       inactiveHost.style.pointerEvents = "none";
+      inactiveHost.style.clipPath = "inset(50%)";
 
       const anchors = Array.from(
         document.querySelectorAll('[data-yt-anchor="cover"]')
