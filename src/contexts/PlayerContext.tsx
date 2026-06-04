@@ -224,7 +224,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Handle natural end (when crossfade didn't run, e.g. disabled or unavailable next)
   const handleSongEnd = useCallback(() => {
-    if (crossfadingRef.current) return; // crossfade will handle the swap
+    // If a crossfade is in-flight but the inactive player isn't actually playing,
+    // cancel the crossfade and fall through to a normal advance so playback never stalls.
+    if (crossfadingRef.current) {
+      const inactive = getInactive();
+      let inactiveState = -1;
+      try { inactiveState = inactive?.getPlayerState?.() ?? -1; } catch {}
+      const YT = (window as any).YT;
+      const inactivePlaying = YT && inactiveState === YT.PlayerState.PLAYING;
+      if (inactivePlaying) return; // crossfade will handle the swap
+      cancelCrossfade();
+    }
     if (repeatRef.current === "one") {
       const a = getActive();
       try { a?.seekTo?.(0, true); a?.playVideo?.(); } catch {}
@@ -237,14 +247,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         setQueueIndex(nextIndex);
         setCurrentSong(nextSong);
         markSongAsPlayed(nextSong.id);
-        try { getActive()?.loadVideoById?.(nextSong.youtube_video_id); } catch {}
+        try {
+          const a = getActive();
+          a?.loadVideoById?.(nextSong.youtube_video_id);
+          a?.playVideo?.();
+        } catch {}
         trackPlay.mutate(nextSong.id);
         updateListeningActivity(nextSong);
         return;
       }
     }
     setIsPlaying(false);
-  }, [getNextIndex, markSongAsPlayed, trackPlay, updateListeningActivity]);
+  }, [cancelCrossfade, getNextIndex, markSongAsPlayed, trackPlay, updateListeningActivity]);
 
   const handleSongEndRef = useRef(handleSongEnd);
   useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
@@ -327,14 +341,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const activeHost = activeKeyRef.current === "a" ? hostA : hostB;
       const inactiveHost = activeKeyRef.current === "a" ? hostB : hostA;
 
-      // Park inactive offscreen but keep playable
+      // Park inactive on-screen with real pixel size but visually hidden.
+      // Mobile browsers refuse to play 1px / offscreen videos, which would break the crossfade preload.
       inactiveHost.style.display = "block";
-      inactiveHost.style.top = "-9999px";
-      inactiveHost.style.left = "-9999px";
-      inactiveHost.style.width = "1px";
-      inactiveHost.style.height = "1px";
+      inactiveHost.style.position = "fixed";
+      inactiveHost.style.top = "0px";
+      inactiveHost.style.left = "0px";
+      inactiveHost.style.width = "160px";
+      inactiveHost.style.height = "90px";
+      inactiveHost.style.opacity = "0.001";
       inactiveHost.style.zIndex = "0";
       inactiveHost.style.pointerEvents = "none";
+      inactiveHost.style.clipPath = "inset(50%)";
 
       const anchors = Array.from(
         document.querySelectorAll('[data-yt-anchor="cover"]')
