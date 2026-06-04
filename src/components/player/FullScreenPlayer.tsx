@@ -182,11 +182,9 @@ const FullScreenPlayer = ({ isOpen, onClose }: FullScreenPlayerProps) => {
               </div>
             </div>
 
-            {/* Gesture hints */}
+            {/* Gesture hint */}
             <div className="absolute top-20 left-1/2 -translate-x-1/2 flex gap-4 text-xs text-muted-foreground/60">
-              <span>← Prev</span>
-              <span>↓ Close</span>
-              <span>Next →</span>
+              <span>↓ Swipe down to close</span>
             </div>
 
             {/* Settings Panel */}
