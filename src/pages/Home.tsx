@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import HeroSection from "@/components/home/HeroSection";
 import SongCard from "@/components/home/SongCard";
-import { useSongs, useRecentlyPlayed } from "@/hooks/useSongs";
+import { useSongs, useRecentlyPlayed, useThrowbacks } from "@/hooks/useSongs";
 import { useAlbums, useFeaturedAlbums } from "@/hooks/useAlbums";
 import { useTrendingSongs, useFeaturedSongs, useFeaturedArtistsFromPlays } from "@/hooks/useTrendingSongs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,16 +33,12 @@ const Home = () => {
     return recentlyPlayed.slice(0, 6);
   }, [recentlyPlayed]);
 
-  // Stable Throwbacks — memoized
+  // Throwbacks: songs the user actually played 60+ days ago
+  const { data: throwbacksData } = useThrowbacks(60);
   const throwbacks = useMemo(() => {
-    const sixtyDaysAgo = new Date();
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    if (songs && songs.length > 0) {
-      const oldSongs = songs.filter(s => new Date(s.created_at) < sixtyDaysAgo).slice(0, 6);
-      return oldSongs.length > 0 ? oldSongs : songs.slice(-6).reverse();
-    }
+    if (throwbacksData && throwbacksData.length > 0) return throwbacksData.slice(0, 6);
     return null;
-  }, [songs]);
+  }, [throwbacksData]);
 
   const handlePlayAlbum = (albumTitle: string, artistName: string) => {
     const albumSongs = songs?.filter(
