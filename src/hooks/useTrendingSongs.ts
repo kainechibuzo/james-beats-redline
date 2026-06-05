@@ -10,6 +10,7 @@ export const useTrendingSongs = (limit = 10) => {
         .from("songs")
         .select("*")
         .eq("is_public", true)
+        .gt("play_count", 0)
         .order("play_count", { ascending: false })
         .limit(limit);
 
@@ -29,6 +30,7 @@ export const useFeaturedSongs = (limit = 6) => {
         .from("songs")
         .select("*")
         .eq("is_public", true)
+        .gt("play_count", 0)
         .order("play_count", { ascending: false })
         .limit(limit);
 
@@ -48,6 +50,7 @@ export const useFeaturedArtistsFromPlays = (limit = 8) => {
         .from("songs")
         .select("artist, cover_url, play_count")
         .eq("is_public", true)
+        .gt("play_count", 0)
         .order("play_count", { ascending: false })
         .limit(100);
 
