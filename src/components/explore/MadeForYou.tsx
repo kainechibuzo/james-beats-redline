@@ -35,9 +35,24 @@ const MadeForYou = () => {
     { name: string; songs: any[]; gradient: string }[]
   >([]);
 
+  const buildPlaylist = async (prompt: string): Promise<any[]> => {
+    const { data, error } = await supabase.functions.invoke("generate-playlist", {
+      body: { type: "ai_generated", userId: user?.id, mood: prompt },
+    });
+    if (error) throw error;
+    const songIds: string[] = data?.playlist?.songs || [];
+    if (!songIds.length || !allSongs) return [];
+    const map = new Map(allSongs.map((s) => [s.id, s]));
+    return songIds.map((id) => map.get(id)).filter(Boolean) as any[];
+  };
+
   const generateRecommendations = async () => {
     if (!allSongs || allSongs.length === 0) {
       toast.error("No songs available to generate recommendations");
+      return;
+    }
+    if (!user) {
+      toast.error("Sign in to generate personalized playlists");
       return;
     }
 
@@ -50,51 +65,44 @@ const MadeForYou = () => {
       });
 
       if (error) throw error;
-
       setRecommendations(data);
 
-      // Generate playlists from recommendations
-      const playlists: { name: string; songs: any[]; gradient: string }[] = [];
-
-      // Genre-based playlists
-      (data.genres || []).slice(0, 2).forEach((genre: string, i: number) => {
-        const genreSongs = allSongs.filter(
-          (s) => s.genre?.toLowerCase() === genre.toLowerCase()
-        );
-        if (genreSongs.length > 0) {
-          playlists.push({
-            name: `${genre} Mix`,
-            songs: [...genreSongs].sort(() => Math.random() - 0.5).slice(0, 15),
-            gradient: PLAYLIST_GRADIENTS[i % PLAYLIST_GRADIENTS.length],
-          });
-        }
-      });
-
-      // Mood-based playlists
-      (data.moods || []).slice(0, 2).forEach((mood: string, i: number) => {
-        const moodSongs = [...allSongs].sort(() => Math.random() - 0.5).slice(0, 15);
-        playlists.push({
-          name: mood,
-          songs: moodSongs,
-          gradient: PLAYLIST_GRADIENTS[(i + 2) % PLAYLIST_GRADIENTS.length],
-        });
-      });
-
-      // Discovery playlist
+      // Build prompts for AI-curated playlists
+      const prompts: { name: string; prompt: string }[] = [];
+      (data.genres || []).slice(0, 2).forEach((g: string) =>
+        prompts.push({ name: `${g} Mix`, prompt: `A playlist of ${g} songs the user will love` })
+      );
+      (data.moods || []).slice(0, 2).forEach((m: string) =>
+        prompts.push({ name: m, prompt: `${m} vibes playlist` })
+      );
       if (data.discovery) {
-        const discoverySongs = [...allSongs].sort(() => Math.random() - 0.5).slice(0, 15);
-        playlists.push({
-          name: data.discovery.length > 30 ? data.discovery.slice(0, 30) + "…" : data.discovery,
-          songs: discoverySongs,
-          gradient: PLAYLIST_GRADIENTS[4],
-        });
+        prompts.push({ name: "Discovery", prompt: data.discovery });
       }
+
+      // Resolve all in parallel via AI playlist generator
+      const results = await Promise.all(
+        prompts.map(async (p, i) => {
+          try {
+            const songs = await buildPlaylist(p.prompt);
+            if (!songs.length) return null;
+            return {
+              name: p.name.length > 30 ? p.name.slice(0, 30) + "…" : p.name,
+              songs,
+              gradient: PLAYLIST_GRADIENTS[i % PLAYLIST_GRADIENTS.length],
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const playlists = results.filter(Boolean) as any[];
+      if (!playlists.length) throw new Error("Empty results");
 
       setGeneratedPlaylists(playlists);
       toast.success("Playlists generated just for you!");
     } catch (err) {
       console.error("Failed to generate recommendations:", err);
-      // Fallback playlists
       const fallback = [
         { name: "Chill Vibes", songs: [...allSongs].sort(() => Math.random() - 0.5).slice(0, 15), gradient: PLAYLIST_GRADIENTS[0] },
         { name: "Energy Boost", songs: [...allSongs].sort(() => Math.random() - 0.5).slice(0, 15), gradient: PLAYLIST_GRADIENTS[1] },
