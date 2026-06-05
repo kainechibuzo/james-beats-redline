@@ -257,21 +257,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (nextIndex !== -1) {
       const nextSong = queueRef.current[nextIndex];
       if (nextSong?.youtube_video_id) {
-        setQueueIndex(nextIndex);
-        setCurrentSong(nextSong);
-        markSongAsPlayed(nextSong.id);
         try {
           const a = getActive();
           a?.loadVideoById?.(nextSong.youtube_video_id);
           a?.playVideo?.();
         } catch {}
-        trackPlay.mutate(nextSong.id);
-        updateListeningActivity(nextSong);
+        consumeAndAdvance(nextSong, nextIndex);
         return;
       }
     }
     setIsPlaying(false);
-  }, [cancelCrossfade, getNextIndex, markSongAsPlayed, trackPlay, updateListeningActivity]);
+  }, [cancelCrossfade, getNextIndex, consumeAndAdvance]);
 
   const handleSongEndRef = useRef(handleSongEnd);
   useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
