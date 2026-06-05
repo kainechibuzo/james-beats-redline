@@ -178,6 +178,23 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     try { getActive()?.setVolume?.(Math.round(volumeRef.current * 100)); } catch {}
   }, []);
 
+  // Remove the just-finished song from the queue and place nextSong at the right index.
+  const consumeAndAdvance = useCallback((nextSong: Song, nextIndex: number) => {
+    const oldIdx = queueIndexRef.current;
+    setQueueState((prev) => {
+      if (oldIdx < 0 || oldIdx >= prev.length) return prev;
+      const copy = prev.slice();
+      copy.splice(oldIdx, 1);
+      return copy;
+    });
+    const newIdx = nextIndex > oldIdx ? nextIndex - 1 : nextIndex;
+    setQueueIndex(newIdx);
+    setCurrentSong(nextSong);
+    markSongAsPlayed(nextSong.id);
+    trackPlay.mutate(nextSong.id);
+    updateListeningActivity(nextSong);
+  }, [markSongAsPlayed, trackPlay, updateListeningActivity]);
+
   const completeCrossfade = useCallback((nextSong: Song, nextIndex: number) => {
     const oldActive = getActive();
     try { oldActive?.stopVideo?.(); } catch {}
@@ -189,12 +206,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       clearInterval(crossfadeIntervalRef.current);
       crossfadeIntervalRef.current = null;
     }
-    setQueueIndex(nextIndex);
-    setCurrentSong(nextSong);
-    markSongAsPlayed(nextSong.id);
-    trackPlay.mutate(nextSong.id);
-    updateListeningActivity(nextSong);
-  }, [markSongAsPlayed, trackPlay, updateListeningActivity]);
+    consumeAndAdvance(nextSong, nextIndex);
+  }, [consumeAndAdvance]);
 
   const startCrossfade = useCallback((nextSong: Song, nextIndex: number) => {
     const inactive = getInactive();
@@ -244,21 +257,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (nextIndex !== -1) {
       const nextSong = queueRef.current[nextIndex];
       if (nextSong?.youtube_video_id) {
-        setQueueIndex(nextIndex);
-        setCurrentSong(nextSong);
-        markSongAsPlayed(nextSong.id);
         try {
           const a = getActive();
           a?.loadVideoById?.(nextSong.youtube_video_id);
           a?.playVideo?.();
         } catch {}
-        trackPlay.mutate(nextSong.id);
-        updateListeningActivity(nextSong);
+        consumeAndAdvance(nextSong, nextIndex);
         return;
       }
     }
     setIsPlaying(false);
-  }, [cancelCrossfade, getNextIndex, markSongAsPlayed, trackPlay, updateListeningActivity]);
+  }, [cancelCrossfade, getNextIndex, consumeAndAdvance]);
 
   const handleSongEndRef = useRef(handleSongEnd);
   useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
