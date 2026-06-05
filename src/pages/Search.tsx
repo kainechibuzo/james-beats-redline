@@ -129,8 +129,12 @@ const Search = () => {
                 Albums
               </h2>
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {filteredAlbums.slice(0, 6).map((album) => (
-                  <div key={album.id} className="min-w-[140px]">
+                {filteredAlbums.slice(0, 12).map((album) => (
+                  <Link
+                    key={album.id}
+                    to={`/album/${album.id}`}
+                    className="min-w-[140px] hover:opacity-80 transition-opacity"
+                  >
                     <div className="aspect-square rounded-lg bg-muted overflow-hidden mb-2">
                       {album.cover_url ? (
                         <img src={album.cover_url} alt={album.title} className="w-full h-full object-cover" />
@@ -142,7 +146,7 @@ const Search = () => {
                     </div>
                     <p className="font-medium text-sm truncate">{album.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{album.artist}</p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </section>
