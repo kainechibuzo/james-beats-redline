@@ -83,6 +83,43 @@ export const useRecentlyPlayed = () => {
   });
 };
 
+export const useThrowbacks = (daysAgo = 60) => {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["throwbacks", user?.id, daysAgo],
+    queryFn: async () => {
+      if (!user) return [];
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - daysAgo);
+
+      const { data, error } = await supabase
+        .from("recently_played")
+        .select(`played_at, song_id, songs (*)`)
+        .eq("user_id", user.id)
+        .lt("played_at", cutoff.toISOString())
+        .order("played_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      const seen = new Set<string>();
+      const unique = (data || []).filter((item: any) => {
+        if (!item.songs || seen.has(item.song_id)) return false;
+        seen.add(item.song_id);
+        return true;
+      });
+
+      return unique.slice(0, 12).map((item: any) => ({
+        ...item.songs,
+        played_at: item.played_at,
+      })) as (Song & { played_at: string })[];
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
 export const useTrackPlay = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
