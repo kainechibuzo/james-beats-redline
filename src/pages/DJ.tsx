@@ -8,6 +8,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import PremiumFeatureGate from "@/components/subscription/PremiumFeatureGate";
 
 const MOODS = ["energetic", "chill", "focus", "party", "romantic", "workout", "sad", "happy"];
@@ -36,6 +37,7 @@ const DJ = () => {
   const [currentExplanation, setCurrentExplanation] = useState("");
   const [fullDayPlaylist, setFullDayPlaylist] = useState<FullDayPlaylist | null>(null);
   const [isFullDayMode, setIsFullDayMode] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState("");
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Speak DJ message - Gen Z style, natural voice
@@ -366,7 +368,32 @@ const DJ = () => {
           </div>
         </div>
 
+        {/* Free-text request — e.g. "I'm in the mood for some J. Cole" */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const prompt = customPrompt.trim();
+            if (!prompt || isLoading) return;
+            setSelectedMood(prompt);
+            getDJMix(prompt);
+          }}
+          className="flex gap-2 mb-4"
+        >
+          <Input
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder='Tell DJ what you want, e.g. "in the mood for some J. Cole"'
+            disabled={isLoading}
+            className="flex-1"
+          />
+          <Button type="submit" variant="glow" size="sm" disabled={isLoading || !customPrompt.trim()}>
+            <Sparkles className="w-4 h-4 mr-1" />
+            Ask DJ
+          </Button>
+        </form>
+
         {/* Mood Selection */}
+
         <div className="flex flex-wrap gap-2 mb-4">
           {MOODS.map(mood => (
             <Button
