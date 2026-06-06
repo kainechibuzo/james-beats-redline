@@ -448,20 +448,74 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     updateListeningActivity(song);
   }, [cancelCrossfade, markSongAsPlayed, trackPlay, updateListeningActivity]);
 
+  // Build a smart "similar tracks" queue from a seed song (same genre, then trending).
+  const buildSimilarQueue = useCallback(async (seed: Song) => {
+    try {
+      const collected: Song[] = [];
+      const seenIds = new Set<string>([seed.id]);
+      const push = (rows: any[] | null) => {
+        for (const r of rows || []) {
+          if (!r?.id || seenIds.has(r.id)) continue;
+          if (!r.youtube_video_id) continue;
+          seenIds.add(r.id);
+          collected.push(r as Song);
+        }
+      };
+
+      if (seed.genre) {
+        const { data } = await supabase
+          .from("songs")
+          .select("*")
+          .eq("is_public", true)
+          .eq("genre", seed.genre)
+          .neq("artist", seed.artist)
+          .order("play_count", { ascending: false })
+          .limit(30);
+        push(data);
+      }
+
+      if (collected.length < 20) {
+        const { data } = await supabase
+          .from("songs")
+          .select("*")
+          .eq("is_public", true)
+          .neq("id", seed.id)
+          .order("play_count", { ascending: false })
+          .limit(40);
+        push(data);
+      }
+
+      // Shuffle for variety
+      for (let i = collected.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [collected[i], collected[j]] = [collected[j], collected[i]];
+      }
+
+      // Only seed if the queue is still just this song (user hasn't changed context).
+      if (
+        queueRef.current.length <= 1 &&
+        queueRef.current[0]?.id === seed.id
+      ) {
+        const newQueue = [seed, ...collected.slice(0, 30)];
+        setQueueState(newQueue);
+        setQueueIndex(0);
+      }
+    } catch (e) {
+      console.warn("buildSimilarQueue failed", e);
+    }
+  }, []);
+
   const play = useCallback((song: Song) => {
     setCurrentSong(song);
     setPlayingFrom("queue");
     setPlaylistName(null);
-    const idx = queue.findIndex((s) => s.id === song.id);
-    if (idx === -1) {
-      setQueueState((prev) => [...prev, song]);
-      setQueueIndex(queue.length);
-    } else {
-      setQueueIndex(idx);
-    }
+    // Start a fresh, seed-only queue, then enrich with similar tracks.
+    setQueueState([song]);
+    setQueueIndex(0);
     resetPlayedSongs([song.id]);
     playSongInternal(song);
-  }, [queue, playSongInternal, resetPlayedSongs]);
+    void buildSimilarQueue(song);
+  }, [playSongInternal, resetPlayedSongs, buildSimilarQueue]);
 
   const playSong = useCallback((song: Song, queueSongs?: Song[], name?: string) => {
     if (queueSongs && queueSongs.length > 0) {
