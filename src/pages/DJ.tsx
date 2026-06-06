@@ -27,7 +27,7 @@ const DJ = () => {
   const { data: recentlyPlayed } = useRecentlyPlayed();
   const { data: likedSongs } = useLikedSongs();
   const createPlaylist = useCreatePlaylist();
-  const { play } = usePlayer();
+  const { play, playSong } = usePlayer();
   
   const [isLoading, setIsLoading] = useState(false);
   const [djMessage, setDjMessage] = useState("");
