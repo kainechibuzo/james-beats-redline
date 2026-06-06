@@ -157,16 +157,12 @@ export const useForYou = () => {
 
       if (likedError) throw likedError;
 
-      const genres = liked
-        .map((l: any) => l.songs?.genre)
-        .filter(Boolean);
-
-      const topGenre = genres.length > 0 
-        ? genres.sort((a: string, b: string) =>
-            genres.filter((v: string) => v === a).length -
-            genres.filter((v: string) => v === b).length
-          ).pop()
+      const counts = new Map<string, number>();
+      genres.forEach((g: string) => counts.set(g, (counts.get(g) || 0) + 1));
+      const topGenre = counts.size
+        ? [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
         : null;
+
 
       const query = supabase
         .from("songs")
