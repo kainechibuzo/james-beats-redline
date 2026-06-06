@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Disc3, Sparkles, Music, Plus, ListMusic, Mic, MicOff, Volume2, RefreshCw, ThumbsUp, ThumbsDown, Calendar, Sun, Moon, Sunset } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSongs, useRecentlyPlayed, useLikedSongs, Song } from "@/hooks/useSongs";
+
 import { useCreatePlaylist } from "@/hooks/usePlaylists";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ const DJ = () => {
   const { data: recentlyPlayed } = useRecentlyPlayed();
   const { data: likedSongs } = useLikedSongs();
   const createPlaylist = useCreatePlaylist();
-  const { play } = usePlayer();
+  const { play, playSong } = usePlayer();
   
   const [isLoading, setIsLoading] = useState(false);
   const [djMessage, setDjMessage] = useState("");
@@ -269,8 +270,27 @@ const DJ = () => {
   };
 
   const handlePlaySuggested = (song: Song) => {
-    play(song);
+    // Use the DJ's curated suggestions as the queue so what plays next matches what's shown.
+    let queueSongs: Song[] = [];
+    if (fullDayPlaylist) {
+      queueSongs = [
+        ...fullDayPlaylist.morning,
+        ...fullDayPlaylist.afternoon,
+        ...fullDayPlaylist.evening,
+        ...fullDayPlaylist.night,
+      ];
+    } else if (suggestedSongs.length > 0) {
+      queueSongs = suggestedSongs;
+    }
+    // Ensure clicked song leads the queue
+    const ordered = [song, ...queueSongs.filter((s) => s.id !== song.id)];
+    if (ordered.length > 1) {
+      playSong(song, ordered, "DJ Mix");
+    } else {
+      play(song);
+    }
   };
+
 
   const handleSkip = () => {
     if (suggestedSongs.length > 1) {

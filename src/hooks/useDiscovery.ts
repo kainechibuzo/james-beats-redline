@@ -45,20 +45,23 @@ export const useMoodPlaylists = () => {
   return useQuery({
     queryKey: ["mood-songs", currentMood],
     queryFn: async () => {
-      if (!currentMood) return [];
+      if (!currentMood) return { mood: null, songs: [] };
 
+      const term = `%${currentMood}%`;
       const { data, error } = await supabase
         .from("songs")
         .select("*")
         .eq("is_public", true)
+        .or(`genre.ilike.${term},title.ilike.${term},album.ilike.${term}`)
         .limit(50);
 
       if (error) throw error;
-      return { mood: currentMood, songs: data };
+      return { mood: currentMood, songs: data || [] };
     },
     enabled: !!currentMood,
   });
 };
+
 
 // 23. Similar Artists
 export const useSimilarArtists = (artistName: string) => {
@@ -154,16 +157,17 @@ export const useForYou = () => {
 
       if (likedError) throw likedError;
 
-      const genres = liked
+      const genres: string[] = (liked || [])
         .map((l: any) => l.songs?.genre)
         .filter(Boolean);
 
-      const topGenre = genres.length > 0 
-        ? genres.sort((a: string, b: string) =>
-            genres.filter((v: string) => v === a).length -
-            genres.filter((v: string) => v === b).length
-          ).pop()
+      const counts = new Map<string, number>();
+      genres.forEach((g) => counts.set(g, (counts.get(g) || 0) + 1));
+      const topGenre = counts.size
+        ? [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
         : null;
+
+
 
       const query = supabase
         .from("songs")
@@ -235,17 +239,48 @@ export const useDecadePlaylists = (decade: typeof DECADES[number]) => {
   return useQuery({
     queryKey: ["decade-songs", decade],
     queryFn: async () => {
+      // Decade like "1990s" -> match "1990", "199" prefix, or "90s" in title/album/genre
+      const startYear = parseInt(decade.slice(0, 4), 10);
+      const shortTag = `${decade.slice(2, 4)}s`; // "90s"
+      const fullTag = decade; // "1990s"
+      const yearPrefix = decade.slice(0, 3); // "199"
+
+      const term1 = `%${fullTag}%`;
+      const term2 = `%${shortTag}%`;
+      const term3 = `%${yearPrefix}%`;
+
       const { data, error } = await supabase
         .from("songs")
         .select("*")
         .eq("is_public", true)
+        .or(
+          [
+            `title.ilike.${term1}`,
+            `album.ilike.${term1}`,
+            `genre.ilike.${term1}`,
+            `title.ilike.${term2}`,
+            `album.ilike.${term2}`,
+            `title.ilike.${term3}`,
+            `album.ilike.${term3}`,
+          ].join(",")
+        )
         .limit(50);
 
       if (error) throw error;
-      return data;
+      // Filter out obvious mismatches (decade tag matched but year wrong)
+      return (data || []).filter((s: any) => {
+        const haystack = `${s.title || ""} ${s.album || ""} ${s.genre || ""}`;
+        if (haystack.includes(fullTag) || haystack.includes(shortTag)) return true;
+        // Year prefix check: ensure a 4-digit year within the decade exists
+        const m = haystack.match(/\b(19|20)\d{2}\b/);
+        if (!m) return false;
+        const year = parseInt(m[0], 10);
+        return year >= startYear && year < startYear + 10;
+      });
     },
   });
 };
+
 
 // 30. Artist Radio
 export const useArtistRadio = (artistName: string) => {
