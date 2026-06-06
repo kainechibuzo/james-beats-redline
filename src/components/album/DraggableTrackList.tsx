@@ -26,7 +26,7 @@ interface SortableTrackProps {
 }
 
 const SortableTrack: React.FC<SortableTrackProps> = ({ song, index, allSongs, canEdit, onEdit }) => {
-  const { playSong, setQueue } = usePlayer();
+  const { playSong } = usePlayer();
   const {
     attributes,
     listeners,
@@ -43,8 +43,8 @@ const SortableTrack: React.FC<SortableTrackProps> = ({ song, index, allSongs, ca
   };
 
   const handlePlay = () => {
-    setQueue(allSongs);
-    playSong(song);
+    // Start playback from this track, with the full album as the queue.
+    playSong(song, allSongs);
   };
 
   return (
