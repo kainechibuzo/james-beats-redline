@@ -239,17 +239,48 @@ export const useDecadePlaylists = (decade: typeof DECADES[number]) => {
   return useQuery({
     queryKey: ["decade-songs", decade],
     queryFn: async () => {
+      // Decade like "1990s" -> match "1990", "199" prefix, or "90s" in title/album/genre
+      const startYear = parseInt(decade.slice(0, 4), 10);
+      const shortTag = `${decade.slice(2, 4)}s`; // "90s"
+      const fullTag = decade; // "1990s"
+      const yearPrefix = decade.slice(0, 3); // "199"
+
+      const term1 = `%${fullTag}%`;
+      const term2 = `%${shortTag}%`;
+      const term3 = `%${yearPrefix}%`;
+
       const { data, error } = await supabase
         .from("songs")
         .select("*")
         .eq("is_public", true)
+        .or(
+          [
+            `title.ilike.${term1}`,
+            `album.ilike.${term1}`,
+            `genre.ilike.${term1}`,
+            `title.ilike.${term2}`,
+            `album.ilike.${term2}`,
+            `title.ilike.${term3}`,
+            `album.ilike.${term3}`,
+          ].join(",")
+        )
         .limit(50);
 
       if (error) throw error;
-      return data;
+      // Filter out obvious mismatches (decade tag matched but year wrong)
+      return (data || []).filter((s: any) => {
+        const haystack = `${s.title || ""} ${s.album || ""} ${s.genre || ""}`;
+        if (haystack.includes(fullTag) || haystack.includes(shortTag)) return true;
+        // Year prefix check: ensure a 4-digit year within the decade exists
+        const m = haystack.match(/\b(19|20)\d{2}\b/);
+        if (!m) return false;
+        const year = parseInt(m[0], 10);
+        return year >= startYear && year < startYear + 10;
+      });
     },
   });
 };
+
 
 // 30. Artist Radio
 export const useArtistRadio = (artistName: string) => {
