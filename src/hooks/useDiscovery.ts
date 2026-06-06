@@ -45,20 +45,23 @@ export const useMoodPlaylists = () => {
   return useQuery({
     queryKey: ["mood-songs", currentMood],
     queryFn: async () => {
-      if (!currentMood) return [];
+      if (!currentMood) return { mood: null, songs: [] };
 
+      const term = `%${currentMood}%`;
       const { data, error } = await supabase
         .from("songs")
         .select("*")
         .eq("is_public", true)
+        .or(`genre.ilike.${term},title.ilike.${term},album.ilike.${term}`)
         .limit(50);
 
       if (error) throw error;
-      return { mood: currentMood, songs: data };
+      return { mood: currentMood, songs: data || [] };
     },
     enabled: !!currentMood,
   });
 };
+
 
 // 23. Similar Artists
 export const useSimilarArtists = (artistName: string) => {
