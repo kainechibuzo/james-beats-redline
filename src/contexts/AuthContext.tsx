@@ -27,12 +27,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Verify the current session against the Auth server. If the user was
+    // deleted server-side (stale session), sign out silently so no
+    // authenticated page ends up hitting FK errors like profiles_user_id_fkey.
+    const validate = async (s: Session | null) => {
+      if (!s) return;
+      const { data, error } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (error || !data.user) {
+        try { await supabase.auth.signOut(); } catch {}
+        setSession(null);
+        setUser(null);
+      }
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+          void validate(session);
+        }
       }
     );
 
@@ -41,9 +60,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      void validate(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
 
   const signUp = async (email: string, password: string, username?: string) => {
