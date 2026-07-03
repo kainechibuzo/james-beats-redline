@@ -86,8 +86,19 @@ const Terms = () => {
       toast.success("Welcome to James Beats");
       navigate("/home", { replace: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to accept terms";
       console.error("Terms accept failed:", err);
+      const anyErr = err as { code?: string; message?: string } | undefined;
+      const isStaleSession =
+        anyErr?.code === "23503" ||
+        (anyErr?.message ?? "").includes("profiles_user_id_fkey") ||
+        (anyErr?.message ?? "").includes('Key is not present in table "users"');
+      if (isStaleSession) {
+        toast.error("Your session expired. Please sign in again.");
+        try { await supabase.auth.signOut(); } catch {}
+        navigate("/auth", { replace: true });
+        return;
+      }
+      const msg = anyErr?.message || "Failed to accept terms";
       setError(msg);
       toast.error(msg);
     } finally {

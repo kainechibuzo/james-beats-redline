@@ -70,14 +70,25 @@ const loadYouTubeApi = (): Promise<any> => {
 };
 
 type PlayerKey = "a" | "b";
+type Engine = "youtube" | "audius";
+
+const pickEngine = (song: Song): Engine =>
+  (song as any).source === "audius" ? "audius" : "youtube";
+
+const canPlaySong = (song: Song): boolean => {
+  if (pickEngine(song) === "audius") return !!song.file_url;
+  return !!song.youtube_video_id;
+};
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const trackPlay = useTrackPlay();
 
-  // Two YouTube players for true crossfade
+  // Two YouTube players + two <audio> elements, one of each per slot
   const playersRef = useRef<{ a: any; b: any }>({ a: null, b: null });
+  const audioRef = useRef<{ a: HTMLAudioElement | null; b: HTMLAudioElement | null }>({ a: null, b: null });
   const readyRef = useRef<{ a: boolean; b: boolean }>({ a: false, b: false });
+  const slotEngineRef = useRef<{ a: Engine | null; b: Engine | null }>({ a: null, b: null });
   const activeKeyRef = useRef<PlayerKey>("a");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -120,8 +131,98 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { crossfadeEnabledRef.current = crossfadeEnabled; }, [crossfadeEnabled]);
   useEffect(() => { crossfadeDurationRef.current = crossfadeDuration; }, [crossfadeDuration]);
 
-  const getActive = () => playersRef.current[activeKeyRef.current];
-  const getInactive = () => playersRef.current[activeKeyRef.current === "a" ? "b" : "a"];
+  const otherKey = (k: PlayerKey): PlayerKey => (k === "a" ? "b" : "a");
+
+  // -------- Per-slot engine helpers (engine-agnostic) --------
+  const slotIsReady = (k: PlayerKey, eng: Engine): boolean =>
+    eng === "youtube" ? !!readyRef.current[k] && !!playersRef.current[k]?.loadVideoById
+                      : !!audioRef.current[k];
+
+  const slotStop = (k: PlayerKey) => {
+    const eng = slotEngineRef.current[k];
+    if (!eng) return;
+    if (eng === "youtube") {
+      try { playersRef.current[k]?.stopVideo?.(); } catch {}
+    } else {
+      const el = audioRef.current[k];
+      if (el) { try { el.pause(); el.removeAttribute("src"); el.load(); } catch {} }
+    }
+  };
+
+  const slotSetVolume = (k: PlayerKey, vol0to100: number) => {
+    const eng = slotEngineRef.current[k];
+    if (!eng) return;
+    if (eng === "youtube") {
+      try { playersRef.current[k]?.setVolume?.(vol0to100); } catch {}
+    } else {
+      const el = audioRef.current[k];
+      if (el) { try { el.volume = Math.max(0, Math.min(1, vol0to100 / 100)); } catch {} }
+    }
+  };
+
+  const slotLoad = (k: PlayerKey, song: Song, opts: { autoplay: boolean; startSeconds?: number }) => {
+    const eng = pickEngine(song);
+    // Stop whatever was previously in this slot (may be different engine)
+    const prev = slotEngineRef.current[k];
+    if (prev && prev !== eng) slotStop(k);
+    slotEngineRef.current[k] = eng;
+
+    if (eng === "youtube") {
+      const p = playersRef.current[k];
+      if (!p || !song.youtube_video_id) return;
+      try {
+        if (opts.autoplay) {
+          p.loadVideoById({ videoId: song.youtube_video_id, startSeconds: opts.startSeconds ?? 0 });
+        } else {
+          p.cueVideoById({ videoId: song.youtube_video_id, startSeconds: opts.startSeconds ?? 0 });
+        }
+      } catch {}
+    } else {
+      const el = audioRef.current[k];
+      if (!el || !song.file_url) return;
+      try {
+        el.src = song.file_url;
+        el.currentTime = opts.startSeconds ?? 0;
+        if (opts.autoplay) void el.play().catch(() => {});
+      } catch {}
+    }
+  };
+
+  const slotPlay = (k: PlayerKey) => {
+    const eng = slotEngineRef.current[k];
+    if (!eng) return;
+    if (eng === "youtube") { try { playersRef.current[k]?.playVideo?.(); } catch {} }
+    else { const el = audioRef.current[k]; if (el) void el.play().catch(() => {}); }
+  };
+
+  const slotPause = (k: PlayerKey) => {
+    const eng = slotEngineRef.current[k];
+    if (!eng) return;
+    if (eng === "youtube") { try { playersRef.current[k]?.pauseVideo?.(); } catch {} }
+    else { const el = audioRef.current[k]; if (el) { try { el.pause(); } catch {} } }
+  };
+
+  const slotSeek = (k: PlayerKey, t: number) => {
+    const eng = slotEngineRef.current[k];
+    if (!eng) return;
+    if (eng === "youtube") { try { playersRef.current[k]?.seekTo?.(t, true); } catch {} }
+    else { const el = audioRef.current[k]; if (el) { try { el.currentTime = t; } catch {} } }
+  };
+
+  const slotGetTime = (k: PlayerKey): number => {
+    const eng = slotEngineRef.current[k];
+    if (!eng) return 0;
+    if (eng === "youtube") { try { return playersRef.current[k]?.getCurrentTime?.() ?? 0; } catch { return 0; } }
+    return audioRef.current[k]?.currentTime ?? 0;
+  };
+
+  const slotGetDuration = (k: PlayerKey): number => {
+    const eng = slotEngineRef.current[k];
+    if (!eng) return 0;
+    if (eng === "youtube") { try { return playersRef.current[k]?.getDuration?.() ?? 0; } catch { return 0; } }
+    const d = audioRef.current[k]?.duration;
+    return Number.isFinite(d ?? NaN) ? (d as number) : 0;
+  };
 
   const resetPlayedSongs = useCallback((songIds: string[] = []) => {
     playedSongIdsRef.current = new Set(songIds);
@@ -173,12 +274,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
     crossfadingRef.current = false;
     crossfadeTargetSongIdRef.current = null;
-    const inactive = getInactive();
-    try { inactive?.stopVideo?.(); } catch {}
-    try { getActive()?.setVolume?.(Math.round(volumeRef.current * 100)); } catch {}
+    const inactive = otherKey(activeKeyRef.current);
+    slotStop(inactive);
+    slotSetVolume(activeKeyRef.current, Math.round(volumeRef.current * 100));
   }, []);
 
-  // Remove the just-finished song from the queue and place nextSong at the right index.
   const consumeAndAdvance = useCallback((nextSong: Song, nextIndex: number) => {
     const oldIdx = queueIndexRef.current;
     setQueueState((prev) => {
@@ -196,10 +296,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [markSongAsPlayed, trackPlay, updateListeningActivity]);
 
   const completeCrossfade = useCallback((nextSong: Song, nextIndex: number) => {
-    const oldActive = getActive();
-    try { oldActive?.stopVideo?.(); } catch {}
-    activeKeyRef.current = activeKeyRef.current === "a" ? "b" : "a";
-    try { getActive()?.setVolume?.(Math.round(volumeRef.current * 100)); } catch {}
+    const oldActive = activeKeyRef.current;
+    slotStop(oldActive);
+    activeKeyRef.current = otherKey(oldActive);
+    slotSetVolume(activeKeyRef.current, Math.round(volumeRef.current * 100));
     crossfadingRef.current = false;
     crossfadeTargetSongIdRef.current = null;
     if (crossfadeIntervalRef.current) {
@@ -210,58 +310,55 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   }, [consumeAndAdvance]);
 
   const startCrossfade = useCallback((nextSong: Song, nextIndex: number) => {
-    const inactive = getInactive();
-    if (!inactive?.loadVideoById || !nextSong.youtube_video_id) return;
+    if (!canPlaySong(nextSong)) return;
+    const inactive = otherKey(activeKeyRef.current);
     crossfadingRef.current = true;
     crossfadeTargetSongIdRef.current = nextSong.id;
     const dur = Math.max(1, crossfadeDurationRef.current);
     const targetVol = Math.round(volumeRef.current * 100);
-    try {
-      inactive.loadVideoById({ videoId: nextSong.youtube_video_id, startSeconds: 0 });
-      inactive.setVolume(0);
-      inactive.playVideo();
-    } catch {}
+    slotLoad(inactive, nextSong, { autoplay: true, startSeconds: 0 });
+    slotSetVolume(inactive, 0);
+    slotPlay(inactive);
     const startTs = Date.now();
     crossfadeIntervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startTs) / 1000;
       const r = Math.min(1, elapsed / dur);
-      try {
-        getActive()?.setVolume?.(Math.round((1 - r) * targetVol));
-        inactive.setVolume(Math.round(r * targetVol));
-      } catch {}
-      if (r >= 1) {
-        completeCrossfade(nextSong, nextIndex);
-      }
+      slotSetVolume(activeKeyRef.current, Math.round((1 - r) * targetVol));
+      slotSetVolume(inactive, Math.round(r * targetVol));
+      if (r >= 1) completeCrossfade(nextSong, nextIndex);
     }, 100);
   }, [completeCrossfade]);
 
-  // Handle natural end (when crossfade didn't run, e.g. disabled or unavailable next)
   const handleSongEnd = useCallback(() => {
-    // If a crossfade is in-flight but the inactive player isn't actually playing,
-    // cancel the crossfade and fall through to a normal advance so playback never stalls.
     if (crossfadingRef.current) {
-      const inactive = getInactive();
-      let inactiveState = -1;
-      try { inactiveState = inactive?.getPlayerState?.() ?? -1; } catch {}
-      const YT = (window as any).YT;
-      const inactivePlaying = YT && inactiveState === YT.PlayerState.PLAYING;
-      if (inactivePlaying) return; // crossfade will handle the swap
+      // If a crossfade is in-flight and inactive really is playing, let it finish.
+      const inactive = otherKey(activeKeyRef.current);
+      const eng = slotEngineRef.current[inactive];
+      let playing = false;
+      if (eng === "youtube") {
+        try {
+          const st = playersRef.current[inactive]?.getPlayerState?.() ?? -1;
+          playing = st === (window as any).YT?.PlayerState?.PLAYING;
+        } catch {}
+      } else if (eng === "audius") {
+        const el = audioRef.current[inactive];
+        playing = !!el && !el.paused && !el.ended && el.currentTime > 0;
+      }
+      if (playing) return;
       cancelCrossfade();
     }
     if (repeatRef.current === "one") {
-      const a = getActive();
-      try { a?.seekTo?.(0, true); a?.playVideo?.(); } catch {}
+      slotSeek(activeKeyRef.current, 0);
+      slotPlay(activeKeyRef.current);
       return;
     }
     const nextIndex = getNextIndex();
     if (nextIndex !== -1) {
       const nextSong = queueRef.current[nextIndex];
-      if (nextSong?.youtube_video_id) {
-        try {
-          const a = getActive();
-          a?.loadVideoById?.(nextSong.youtube_video_id);
-          a?.playVideo?.();
-        } catch {}
+      if (nextSong && canPlaySong(nextSong)) {
+        slotLoad(activeKeyRef.current, nextSong, { autoplay: true });
+        slotSetVolume(activeKeyRef.current, Math.round(volumeRef.current * 100));
+        slotPlay(activeKeyRef.current);
         consumeAndAdvance(nextSong, nextIndex);
         return;
       }
@@ -271,6 +368,35 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const handleSongEndRef = useRef(handleSongEnd);
   useEffect(() => { handleSongEndRef.current = handleSongEnd; }, [handleSongEnd]);
+
+  // Init audio elements
+  useEffect(() => {
+    const makeAudio = (k: PlayerKey): HTMLAudioElement => {
+      const el = new Audio();
+      el.preload = "auto";
+      el.crossOrigin = "anonymous";
+      el.style.display = "none";
+      el.addEventListener("ended", () => {
+        if (activeKeyRef.current !== k) return;
+        handleSongEndRef.current();
+      });
+      el.addEventListener("play", () => {
+        if (activeKeyRef.current === k) setIsPlaying(true);
+      });
+      el.addEventListener("pause", () => {
+        if (activeKeyRef.current === k) setIsPlaying(false);
+      });
+      el.addEventListener("error", (e) => console.error("audio error", k, e));
+      document.body.appendChild(el);
+      return el;
+    };
+    audioRef.current.a = makeAudio("a");
+    audioRef.current.b = makeAudio("b");
+    return () => {
+      audioRef.current.a?.remove();
+      audioRef.current.b?.remove();
+    };
+  }, []);
 
   // Init both YouTube players
   useEffect(() => {
@@ -317,12 +443,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
               readyRef.current[key] = true;
               setPlayersReadyTick((t) => t + 1);
               try { playersRef.current[key]?.setVolume(0); } catch {}
-              if (key === activeKeyRef.current) {
+              if (key === activeKeyRef.current && slotEngineRef.current[key] === "youtube") {
                 try { playersRef.current[key]?.setVolume(Math.round(volumeRef.current * 100)); } catch {}
               }
             },
             onStateChange: (e: any) => {
-              if (key !== activeKeyRef.current) return; // ignore inactive player events
+              if (key !== activeKeyRef.current) return;
+              if (slotEngineRef.current[key] !== "youtube") return;
               const state = e.data;
               if (state === YT.PlayerState.PLAYING) setIsPlaying(true);
               else if (state === YT.PlayerState.PAUSED) setIsPlaying(false);
@@ -339,19 +466,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pin the ACTIVE host onto whichever element has data-yt-anchor="cover".
-  // Inactive host is parked offscreen (only audible).
+  // Pin the ACTIVE YT host onto whichever element has data-yt-anchor="cover".
   useEffect(() => {
     const apply = () => {
       const hostA = document.getElementById(HOST_A_ID);
       const hostB = document.getElementById(HOST_B_ID);
       if (!hostA || !hostB) return;
 
-      const activeHost = activeKeyRef.current === "a" ? hostA : hostB;
-      const inactiveHost = activeKeyRef.current === "a" ? hostB : hostA;
+      const activeK = activeKeyRef.current;
+      const activeHost = activeK === "a" ? hostA : hostB;
+      const inactiveHost = activeK === "a" ? hostB : hostA;
+      const activeEng = slotEngineRef.current[activeK];
 
-      // Park inactive on-screen with real pixel size but visually hidden.
-      // Mobile browsers refuse to play 1px / offscreen videos, which would break the crossfade preload.
       inactiveHost.style.display = "block";
       inactiveHost.style.position = "fixed";
       inactiveHost.style.top = "0px";
@@ -363,6 +489,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       inactiveHost.style.pointerEvents = "none";
       inactiveHost.style.clipPath = "inset(50%)";
 
+      // Only pin the YT iframe when the active slot is playing YouTube.
+      if (!currentSong || activeEng !== "youtube") {
+        activeHost.style.display = "none";
+        return;
+      }
+
       const anchors = Array.from(
         document.querySelectorAll('[data-yt-anchor="cover"]')
       ) as HTMLElement[];
@@ -372,7 +504,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           parseInt(a.dataset.ytPriority ?? "0", 10)
       )[0];
 
-      if (!currentSong || !anchor) {
+      if (!anchor) {
         activeHost.style.display = "none";
         return;
       }
@@ -396,54 +528,50 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [currentSong, playersReadyTick]);
 
-  // Poll time/duration on the ACTIVE player + trigger crossfade preload
+  // Poll active slot for time/duration + crossfade preload
   useEffect(() => {
     pollRef.current = setInterval(() => {
-      const p = getActive();
-      if (!p || typeof p.getCurrentTime !== "function") return;
-      try {
-        const t = p.getCurrentTime();
-        const d = p.getDuration();
-        if (!Number.isNaN(t)) setCurrentTime(t);
-        if (!Number.isNaN(d)) setDuration(d);
+      const k = activeKeyRef.current;
+      const eng = slotEngineRef.current[k];
+      if (!eng) return;
+      const t = slotGetTime(k);
+      const d = slotGetDuration(k);
+      if (!Number.isNaN(t)) setCurrentTime(t);
+      if (!Number.isNaN(d)) setDuration(d);
 
-        // Crossfade trigger: load next track before the current one ends.
-        if (
-          crossfadeEnabledRef.current &&
-          !crossfadingRef.current &&
-          d > 0 &&
-          repeatRef.current !== "one" &&
-          (d - t) <= crossfadeDurationRef.current &&
-          (d - t) > 0.2
-        ) {
-          const nextIndex = getNextIndex();
-          if (nextIndex !== -1) {
-            const nextSong = queueRef.current[nextIndex];
-            if (nextSong?.youtube_video_id) {
-              startCrossfade(nextSong, nextIndex);
-            }
+      if (
+        crossfadeEnabledRef.current &&
+        !crossfadingRef.current &&
+        d > 0 &&
+        repeatRef.current !== "one" &&
+        (d - t) <= crossfadeDurationRef.current &&
+        (d - t) > 0.2
+      ) {
+        const nextIndex = getNextIndex();
+        if (nextIndex !== -1) {
+          const nextSong = queueRef.current[nextIndex];
+          if (nextSong && canPlaySong(nextSong)) {
+            startCrossfade(nextSong, nextIndex);
           }
         }
-      } catch {}
+      }
     }, 250);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [getNextIndex, startCrossfade]);
 
-
   const playSongInternal = useCallback((song: Song) => {
-    if (!song.youtube_video_id) {
-      console.warn("Song has no youtube_video_id; cannot play", song);
+    if (!canPlaySong(song)) {
+      console.warn("Song has no playable source; skipping", song);
       return;
     }
     cancelCrossfade();
     markSongAsPlayed(song.id);
-    const a = getActive();
-    if (readyRef.current[activeKeyRef.current] && a?.loadVideoById) {
-      try {
-        a.loadVideoById(song.youtube_video_id);
-        a.setVolume(Math.round(volumeRef.current * 100));
-      } catch {}
-    }
+    const k = activeKeyRef.current;
+    slotLoad(k, song, { autoplay: true });
+    slotSetVolume(k, Math.round(volumeRef.current * 100));
+    slotPlay(k);
+    // Audius doesn't fire YT state events; reflect play immediately.
+    if (pickEngine(song) === "audius") setIsPlaying(true);
     trackPlay.mutate(song.id);
     updateListeningActivity(song);
   }, [cancelCrossfade, markSongAsPlayed, trackPlay, updateListeningActivity]);
@@ -456,7 +584,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const push = (rows: any[] | null) => {
         for (const r of rows || []) {
           if (!r?.id || seenIds.has(r.id)) continue;
-          if (!r.youtube_video_id) continue;
+          if (!canPlaySong(r as Song)) continue;
           seenIds.add(r.id);
           collected.push(r as Song);
         }
@@ -485,13 +613,11 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         push(data);
       }
 
-      // Shuffle for variety
       for (let i = collected.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [collected[i], collected[j]] = [collected[j], collected[i]];
       }
 
-      // Only seed if the queue is still just this song (user hasn't changed context).
       if (
         queueRef.current.length <= 1 &&
         queueRef.current[0]?.id === seed.id
@@ -509,7 +635,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentSong(song);
     setPlayingFrom("queue");
     setPlaylistName(null);
-    // Start a fresh, seed-only queue, then enrich with similar tracks.
     setQueueState([song]);
     setQueueIndex(0);
     resetPlayedSongs([song.id]);
@@ -532,18 +657,24 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [play, playSongInternal, resetPlayedSongs]);
 
-  const pause = useCallback(() => { getActive()?.pauseVideo?.(); }, []);
-  const resume = useCallback(() => { getActive()?.playVideo?.(); }, []);
+  const pause = useCallback(() => {
+    slotPause(activeKeyRef.current);
+    if (slotEngineRef.current[activeKeyRef.current] === "audius") setIsPlaying(false);
+  }, []);
+  const resume = useCallback(() => {
+    slotPlay(activeKeyRef.current);
+    if (slotEngineRef.current[activeKeyRef.current] === "audius") setIsPlaying(true);
+  }, []);
   const toggle = useCallback(() => { isPlaying ? pause() : resume(); }, [isPlaying, pause, resume]);
   const togglePlay = toggle;
   const seek = useCallback((time: number) => {
     cancelCrossfade();
-    getActive()?.seekTo?.(time, true);
+    slotSeek(activeKeyRef.current, time);
     setCurrentTime(time);
   }, [cancelCrossfade]);
   const setVolume = useCallback((vol: number) => {
     setVolumeState(vol);
-    try { getActive()?.setVolume?.(Math.round(vol * 100)); } catch {}
+    slotSetVolume(activeKeyRef.current, Math.round(vol * 100));
   }, []);
 
   const next = useCallback(() => {
@@ -596,7 +727,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const toggleShuffle = useCallback(() => setShuffle((s) => !s), []);
   const toggleRepeat = useCallback(() => setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off")), []);
 
-  // -------- Persistent playback --------
+  // -------- Persistent playback restore --------
   const restoredRef = useRef(false);
   useEffect(() => {
     if (restoredRef.current) return;
@@ -608,19 +739,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       if (!saved?.songId) return;
       supabase.from("songs").select("*").eq("id", saved.songId).maybeSingle().then(({ data }) => {
         if (!data) return;
-        setCurrentSong(data as Song);
-        setQueueState([data as Song]);
+        const song = data as Song;
+        if (!canPlaySong(song)) return;
+        setCurrentSong(song);
+        setQueueState([song]);
         setQueueIndex(0);
+        const startAt = Math.max(0, saved.position || 0);
+        const eng = pickEngine(song);
+        const k = activeKeyRef.current;
         const waitReady = setInterval(() => {
-          const a = getActive();
-          if (!readyRef.current[activeKeyRef.current] || !a?.cueVideoById) return;
+          if (!slotIsReady(k, eng)) return;
           clearInterval(waitReady);
-          try {
-            a.cueVideoById({
-              videoId: (data as Song).youtube_video_id,
-              startSeconds: Math.max(0, saved.position || 0),
-            });
-          } catch {}
+          slotLoad(k, song, { autoplay: false, startSeconds: startAt });
+          slotEngineRef.current[k] = eng;
         }, 200);
       });
     } catch {}
