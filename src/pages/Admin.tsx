@@ -37,6 +37,7 @@ import IngestionSources from "@/components/admin/IngestionSources";
 import { Rss, Sparkles } from "lucide-react";
 import YouTubeSeeder from "@/components/admin/YouTubeSeeder";
 import YouTubePlaylistImporter from "@/components/admin/YouTubePlaylistImporter";
+import AudiusSeeder from "@/components/admin/AudiusSeeder";
 import {
   LineChart,
   Line,
