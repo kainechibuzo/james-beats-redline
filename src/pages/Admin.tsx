@@ -910,6 +910,7 @@ const Admin = () => {
         </TabsContent>
 
         <TabsContent value="yt-seed" className="space-y-6">
+          <AudiusSeeder />
           <YouTubeSeeder />
           <YouTubePlaylistImporter />
         </TabsContent>
