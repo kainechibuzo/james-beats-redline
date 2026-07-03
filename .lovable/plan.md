@@ -1,76 +1,71 @@
-# James Beats — Phased Plan
+# Audius Full Swap + Terms Fix
 
-I will ship **Phase 1 this turn**. Phases 2–5 each ship in a follow-up message after you confirm Phase 1 looks good. Trying to do all five at once would produce broken half-features.
+## 1. Terms of Use error (quick fix, ship first)
 
----
+The FK error means the browser is holding a session for a `user_id` that no longer exists in `auth.users` (leftover from the delete-all-users migration). Two changes:
 
-## Phase 1 — Stabilize (THIS TURN)
+- **`src/pages/Terms.tsx`** — detect Postgres error `23503` (`profiles_user_id_fkey`) → call `supabase.auth.signOut()` and redirect to `/auth` with a toast: "Your session expired, please sign in again."
+- **`src/contexts/AuthContext.tsx`** — on `INITIAL_SESSION` / `SIGNED_IN`, run `supabase.auth.getUser()`. If it returns `user_not_found` / 403, sign out silently. Prevents any authenticated page from showing FK errors after user deletion.
 
-**Goal:** App stops misbehaving. Audio never stops on its own.
+## 2. Audius native playback (full swap)
 
-1. **Remove Radio & Live pages**
-   - Delete `src/pages/Radio.tsx`, `src/pages/Live.tsx`, routes in `App.tsx`, links in `Sidebar.tsx` and `BottomNav.tsx`.
-   - Keep DB tables (per your answer).
+### 2a. Edge function `audius-ingest`
 
-2. **Stop full page reloads on nav**
-   - Audit for `<a href>` instead of `<Link>` and `window.location.href` usages in nav components; convert to `react-router` `Link`/`navigate`.
-   - This is the root cause of audio cutting out between pages.
+New Deno function at `supabase/functions/audius-ingest/index.ts`.
 
-3. **Persistent playback**
-   - Player already lives in `MainLayout`; verify it never unmounts on route change.
-   - Persist current song + position to `localStorage` every 5s; on app load, restore song (paused) so user can resume. Audio never auto-pauses on navigation.
+- No secrets — Audius discovery API is public. Pick a host from `https://api.audius.co` (returns list of discovery nodes), cache one.
+- Body: `{ kind: "trending" | "genre" | "search", value?: string, limit?: number }`.
+- Endpoints used:
+  - Trending: `/v1/tracks/trending?time=week&genre=<genre>&app_name=jamesbeats`
+  - Search: `/v1/tracks/search?query=<q>&app_name=jamesbeats`
+- Map each track → row in `songs`:
+  - `title`, `artist = user.name`, `genre`, `duration`, `is_public: true`
+  - `cover_url = artwork["480x480"]` (or 1000)
+  - `file_url = <host>/v1/tracks/<id>/stream?app_name=jamesbeats` (302 → mp3, works in `<audio>`)
+  - `source = "audius"`
+  - `youtube_video_id = "audius:" + track.id` (reuses the existing UNIQUE index for dedupe)
+- Upsert with `onConflict: "youtube_video_id", ignoreDuplicates: true`.
 
-4. **Recent Rotation flashing**
-   - Fix `useRecentlyPlayed` / `useTrendingSongs` query keys + add `placeholderData: keepPreviousData` and stable sort to stop re-render churn.
+### 2b. Admin UI `AudiusSeeder`
 
-5. **"Add to Library" album action**
-   - Inspect handler in `Album.tsx` / `Albums.tsx`, repair insert into `liked_albums`.
+New component `src/components/admin/AudiusSeeder.tsx` mounted in the existing `yt-seed` tab of `Admin.tsx`. Buttons:
+- Import Trending (week, all genres)
+- Import by Genre (dropdown: Hip-Hop, R&B, Electronic, Pop, Rock, etc.)
+- Free-text search + import
 
-6. **Explore page**
-   - Read `src/pages/Explore.tsx`, repair whatever is throwing.
+### 2c. Player refactor — route by `source`
 
----
+The player is fully YouTube-IFrame today. Introduce a source-aware wrapper.
 
-## Phase 2 — YouTube Ingestion Upgrades
+- **New helper** `src/lib/playerEngines.ts`
+  ```text
+  type Engine = "youtube" | "audius"
+  pickEngine(song) => song.source === "audius" ? "audius" : "youtube"
+  ```
+- **New audio-element engine** `src/lib/audiusEngine.ts` — thin API mirroring the YT player surface the context uses today: `loadUrl(url)`, `play()`, `pause()`, `seekTo(s)`, `setVolume(0-100)`, `getCurrentTime()`, `getDuration()`, plus `onEnded` / `onReady` / `onStateChange` callbacks. Backed by two `HTMLAudioElement`s (matches the existing two-slot `active/inactive` design so crossfade still works).
+- **`src/contexts/PlayerContext.tsx`** rewrites:
+  - Replace the single YT-only `getActive()` / `loadVideoById` calls with an engine dispatch. Each of the two slots holds either a YT player or an `AudioElement` depending on the currently loaded song.
+  - `playSongInternal`: if engine === "audius" → `audiusEngine.loadUrl(song.file_url)`, else current YT path. Remove the `if (!song.youtube_video_id) return;` guard for audius songs.
+  - Crossfade: keep the 250ms poller; when triggered, prep the inactive slot using the next song's engine (YT `loadVideoById` OR audio-element `.src = ...; .load()`) and fade volumes.
+  - Preload: same — inactive slot loads next audius URL via `<audio preload="auto">` or YT `cueVideoById`.
+  - Volume ramp uses each engine's `setVolume` uniformly.
+- **`src/components/layout/Player.tsx`** — mount two `<audio>` elements (hidden) alongside the two YT iframes. Wire them into the engine on mount.
+- **Visualizer** (`AudioVisualizer.tsx`) currently taps YT — for audius engine wire a WebAudio `AnalyserNode` off the active `<audio>`.
+- **`buildSimilarQueue`** in PlayerContext — drop the `!r.youtube_video_id` skip for audius rows.
 
-- Strict **official-channel-only** ingest for popular searches: accept channels matching `*- Topic`, `*VEVO`, or YouTube `verified` flag. Indie (low result count or user opt-in) keeps current behavior.
-- **Ingest albums**: given a YouTube playlist URL or auto-detected `*- Topic` "Album - X" playlist, create an `albums` row + child `songs` rows with positions.
-- **Ingest playlists**: admin paste-a-playlist-URL flow → user-owned playlist with songs.
-- **Tag-based auto playlists**: pull YouTube `tags[]` + `categoryId` per video into a new `song_tags` table; nightly edge job builds "Made From Your Tags" generated playlists per user from their listening history.
+### 2d. Discovery/recommendation hooks
 
----
+No schema change needed. Existing genre-based similar-queue logic already keys off `genre`, which Audius populates well. Once audius rows are ingested, hooks like `useForYou`, `useTrendingSongs`, `useGenreExplorer` pick them up automatically.
 
-## Phase 3 — Metadata Engine + Profiles
+## Technical notes
 
-- New tables: `artists`, `artist_aliases`, plus expand `albums` and `songs` with `release_date`, `popularity`, `streaming_provider`, `playback_source`, `licensing_status`, `artist_owned`.
-- Nightly ingestion edge function refreshes metadata from YouTube + (optional) MusicBrainz.
-- **Artist profile page** `/artist/:id`: image, bio, discography, albums, songs, rankings, awards, fan count, votes.
-- **Album profile page** `/album/:id`: artwork, tracks, ratings, ranking history.
-- **Song profile page** `/song/:id`: artwork, votes, ranking position.
+- Audius stream endpoint 302-redirects to a signed mp3. Browsers follow redirects on `<audio>` transparently.
+- CORS: Audius discovery + stream serve permissive CORS.
+- Track id column: reusing `youtube_video_id` as the universal external id avoids a migration. If desired later, rename to `external_id`.
+- Rollback: because YT rows are untouched and the engine dispatch is by `source`, disabling audius = just stop ingesting new audius rows (or delete them).
 
----
+## Ship order
 
-## Phase 4 — Voting, Charts, Awards
-
-- Tables: `votes` (entity_type, entity_id, user_id, day), `chart_snapshots`, `awards`, `award_nominees`, `award_votes`, `user_reputation`.
-- Daily vote limits, IP+reputation fraud guard.
-- Charts: Global Top 100, Nigeria Top 100, Trending Songs/Artists/Albums, Most Voted, Fastest Rising, Weekly Movers. Computed by scheduled edge function into `chart_snapshots`.
-- Awards: Artist of Month/Year, Song/Album of Year, Fan Favorite, Best New, Best African, Community Choice. Seasonal nomination + voting windows.
-
----
-
-## Phase 5 — Community
-
-- Artist following, fan clubs, comments, reactions, predictions, polls, share cards.
-
----
-
-## Technical notes (Phase 1 specifics)
-
-- `App.tsx`: drop `<Route path="/radio">` and `<Route path="/live">`. Remove imports.
-- `Sidebar.tsx` / `BottomNav.tsx`: remove Radio + Live entries.
-- `PlayerContext.tsx`: add `useEffect` that on mount reads `localStorage.jb:lastTrack` and sets `currentSong` (paused, with `seekTime`), and an interval that writes `{songId, position}` while playing.
-- `useRecentlyPlayed.ts` (and recent-rotation widget): `placeholderData: (prev) => prev`, dedupe by `song_id`, sort by `played_at desc`, cap to N, memoize the array so child cards don't remount.
-- `Explore.tsx`: read first, then fix the actual throw (likely a stale hook from Radio/Live removal).
-
-After Phase 1 ships and you confirm it feels solid, reply "Phase 2" and I'll proceed.
+1. Terms fix (1 file + 1 file, safe, unblocks the user immediately).
+2. Audius edge function + admin seeder (backend only, no player risk).
+3. Player refactor (biggest risk — do last, in isolation).
