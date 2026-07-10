@@ -1,5 +1,9 @@
 # 🎵 James Beats — Premium Spotify-Style Music PWA
 
+<div align="center">
+  <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/file_00000000004871f4a88813da4292535e-ZpRmD4cS6CGslR1avtnehf92Pb2kax.png" alt="James Beats Logo" width="300" />
+</div>
+
 A production-ready, fully functional music streaming Progressive Web App (PWA). Built with **React 18, Vite, TypeScript, Tailwind, shadcn/ui, and Supabase**. Fully themed in premium Black & Silver with gapless playback, crossfade transitions, and AI-powered recommendations.
 
 ---
@@ -213,16 +217,22 @@ docker build -t james-beats .
 
 ---
 
-## 🎬 Screenshots
+## 🎬 Screenshots & Demo Video
 
-### Player View
-![Player](https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600)
+### Desktop Interface
+<img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/file_000000004c6872439522e29244832d17-a9ReDmfcj2r473HyaMhk24LoQvddRz.png" alt="Desktop Player" width="100%" />
 
-### Album Browse
-![Albums](https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600)
+### Mobile Experience
+<div style="display: flex; gap: 20px; justify-content: center;">
+  <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot_2026-07-10-11-25-48-394_com.android.chrome-b6Vxi2Ukbb9MSL2O12ilgXIlR3mlpF.jpg" alt="Mobile Home" width="250" />
+  <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot_2026-07-10-11-33-25-979_com.android.chrome-MyW5RWmRwvGodZNGw7e0ZFNy3CQ5if.jpg" alt="Mobile Player" width="250" />
+</div>
 
-### Playlist Management
-![Playlists](https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600)
+### Live Demo Video
+<video width="100%" controls>
+  <source src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenrecorder-2026-07-10-11-37-40-638-r66fs0CTHoFglMO2S3wVXXTMRrn2Xp.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 ---
 
