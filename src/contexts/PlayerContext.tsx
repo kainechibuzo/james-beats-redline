@@ -570,7 +570,21 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const playSongInternal = useCallback((song: Song) => {
     if (!canPlaySong(song)) {
-      console.warn("Song has no playable source; skipping", song);
+      console.warn("Song has no Audius stream; skipping legacy YouTube track", song);
+      toast.warning(`"${song.title}" isn't available on Audius — skipping.`);
+      // Try to advance to the next playable track in the queue.
+      const nextIndex = getNextIndex();
+      if (nextIndex !== -1) {
+        const nextSong = queueRef.current[nextIndex];
+        if (nextSong && canPlaySong(nextSong)) {
+          consumeAndAdvance(nextSong, nextIndex);
+          const k = activeKeyRef.current;
+          slotLoad(k, nextSong, { autoplay: true });
+          slotSetVolume(k, Math.round(volumeRef.current * 100));
+          slotPlay(k);
+          setIsPlaying(true);
+        }
+      }
       return;
     }
     cancelCrossfade();
