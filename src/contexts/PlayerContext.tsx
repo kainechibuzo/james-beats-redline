@@ -72,13 +72,12 @@ const loadYouTubeApi = (): Promise<any> => {
 type PlayerKey = "a" | "b";
 type Engine = "youtube" | "audius";
 
-const pickEngine = (song: Song): Engine =>
-  (song as any).source === "audius" ? "audius" : "youtube";
+// YouTube playback has been retired — the platform now streams exclusively
+// via Audius. Any legacy song without a file_url is treated as unplayable
+// and auto-skipped by the queue.
+const pickEngine = (_song: Song): Engine => "audius";
 
-const canPlaySong = (song: Song): boolean => {
-  if (pickEngine(song) === "audius") return !!song.file_url;
-  return !!song.youtube_video_id;
-};
+const canPlaySong = (song: Song): boolean => !!song.file_url;
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
