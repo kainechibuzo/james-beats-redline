@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from "react";
+import { toast } from "sonner";
 import { Song, useTrackPlay } from "@/hooks/useSongs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
@@ -72,13 +73,12 @@ const loadYouTubeApi = (): Promise<any> => {
 type PlayerKey = "a" | "b";
 type Engine = "youtube" | "audius";
 
-const pickEngine = (song: Song): Engine =>
-  (song as any).source === "audius" ? "audius" : "youtube";
+// YouTube playback has been retired — the platform now streams exclusively
+// via Audius. Any legacy song without a file_url is treated as unplayable
+// and auto-skipped by the queue.
+const pickEngine = (_song: Song): Engine => "audius";
 
-const canPlaySong = (song: Song): boolean => {
-  if (pickEngine(song) === "audius") return !!song.file_url;
-  return !!song.youtube_video_id;
-};
+const canPlaySong = (song: Song): boolean => !!song.file_url;
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
@@ -570,7 +570,21 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const playSongInternal = useCallback((song: Song) => {
     if (!canPlaySong(song)) {
-      console.warn("Song has no playable source; skipping", song);
+      console.warn("Song has no Audius stream; skipping legacy YouTube track", song);
+      toast.warning(`"${song.title}" isn't available on Audius — skipping.`);
+      // Try to advance to the next playable track in the queue.
+      const nextIndex = getNextIndex();
+      if (nextIndex !== -1) {
+        const nextSong = queueRef.current[nextIndex];
+        if (nextSong && canPlaySong(nextSong)) {
+          consumeAndAdvance(nextSong, nextIndex);
+          const k = activeKeyRef.current;
+          slotLoad(k, nextSong, { autoplay: true });
+          slotSetVolume(k, Math.round(volumeRef.current * 100));
+          slotPlay(k);
+          setIsPlaying(true);
+        }
+      }
       return;
     }
     cancelCrossfade();
@@ -583,7 +597,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (pickEngine(song) === "audius") setIsPlaying(true);
     trackPlay.mutate(song.id);
     updateListeningActivity(song);
-  }, [cancelCrossfade, markSongAsPlayed, trackPlay, updateListeningActivity]);
+  }, [cancelCrossfade, markSongAsPlayed, trackPlay, updateListeningActivity, getNextIndex, consumeAndAdvance]);
 
   // Build a smart "similar tracks" queue from a seed song (same genre, then trending).
   const buildSimilarQueue = useCallback(async (seed: Song) => {
