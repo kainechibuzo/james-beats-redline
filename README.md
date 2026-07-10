@@ -6,7 +6,7 @@ A production-ready, fully functional music streaming Progressive Web App (PWA). 
 
 ## 🎮 Try the Demo First
 
-**[▶ Launch Live Demo](https://james-beats-demo.vercel.app)** ← Click to test the full UI/UX without any backend setup
+**[▶ Launch Live Demo](https://james-beats.james-denning.com.ng/)** ← Click to test the full UI/UX without any backend setup
 
 The demo includes:
 - ✅ Full interactive music player (play/pause/skip/shuffle/repeat)
