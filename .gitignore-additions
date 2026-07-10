@@ -1,0 +1,27 @@
+# Frontend Demo - Sensitive files to exclude
+# Add these to your existing .gitignore
+
+# 🔒 NEVER commit real credentials
+.env
+.env.local
+.env.*.local
+.env.production
+
+# 🔒 NEVER commit backend logic
+supabase/functions/
+supabase/migrations/
+
+# 🔒 NEVER commit original Supabase client (has real keys)
+src/integrations/supabase/client.ts
+
+# 🔒 NEVER commit original auth (has real logic)
+src/contexts/AuthContext.tsx (if using real auth)
+
+# Admin dashboard (not needed in demo)
+src/components/admin/
+src/pages/Admin.tsx
+
+# Keep the demo versions instead:
+# ✅ src/integrations/supabase/client-demo.ts
+# ✅ src/contexts/AuthContext.demo.tsx
+# ✅ .env.demo
