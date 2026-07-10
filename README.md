@@ -1,26 +1,58 @@
-# 🎵 James Beats — Premium Spotify-Style Music PWA (Full SaaS Source Code)
+# 🎵 James Beats — Premium Spotify-Style Music PWA
 
-A production-ready, fully functional music streaming Progressive Web App (PWA). Built with **React 18, Vite, TypeScript, Tailwind, shadcn/ui, and Supabase**. Fully themed in premium Black & Silver, mobile-first, and ready to deploy as an app or website.
+A production-ready, fully functional music streaming Progressive Web App (PWA). Built with **React 18, Vite, TypeScript, Tailwind, shadcn/ui, and Supabase**. Fully themed in premium Black & Silver with gapless playback, crossfade transitions, and AI-powered recommendations.
 
 ---
 
-## 🚀 Get the Code & Start Your Streaming Business
-This repository serves as the public documentation. You can purchase the full production-ready source code bundle, database migrations, and deployment package instantly.
+## 🎮 Try the Demo First
 
-| Package | Access | Link |
+**[▶ Launch Live Demo](https://james-beats-demo.vercel.app)** ← Click to test the full UI/UX without any backend setup
+
+The demo includes:
+- ✅ Full interactive music player (play/pause/skip/shuffle/repeat)
+- ✅ Browse 50+ sample songs with working audio
+- ✅ Album and artist pages
+- ✅ Playlists and favorites
+- ✅ User profiles and authentication
+- ✅ All premium features unlocked
+
+**No sign-up needed!** Demo user auto-authenticates on load.
+
+### Demo Details
+
+| Aspect | Demo | Premium |
+|--------|------|---------|
+| **Player** | ✅ Full gapless + crossfade | ✅ Real streaming |
+| **Catalog** | 50 sample songs | Millions (Audius API) |
+| **Auth** | Auto-login demo user | Real email auth |
+| **Database** | Local browser memory | Supabase Postgres |
+| **Payments** | Mock modals | Paystack integration |
+| **Admin** | Disabled | Full dashboard |
+
+---
+
+## 🚀 Get the Full Source Code & Start Your Streaming Business
+
+This repository contains the **frontend-only demo** (safe to publish on GitHub). The full production-ready source code with backend, database, and deployment package is available for purchase.
+
+| Package | What You Get | Price |
 | :--- | :--- | :--- |
-| **💳 Purchase Source Code** | Lifetime Access + Updates | [Buy on Gumroad / Ruul](YOUR_GUMROAD_OR_RUUL_LINK_HERE) |
-| **📱 Live Preview** | Test the Full App Live | [Launch Live Demo](YOUR_DEMO_URL_HERE) |
+| **🎮 Frontend Demo** | React components + UI/UX (free, on GitHub) | Free |
+| **💳 Full Source Code** | Complete backend + database + migrations | $1,500+ |
+| **🚀 Setup Service** | Deployment help + custom setup | +$300 |
+
+**[👉 Buy Full Source Code](YOUR_GUMROAD_OR_RUUL_LINK_HERE)** | **[💬 Custom Quote](mailto:kainechibuzo@gmail.com)**
 
 ---
 
 ## 💎 Why This Code is Worth $1,500+
 
-* **Zero Royalty Fees:** Uses the public **Audius Discovery API** for streaming. You get millions of tracks out-of-the-box without paying licensing deals.
+* **Zero Royalty Fees:** Uses the public **Audius Discovery API** for streaming. Get millions of tracks out-of-the-box without paying licensing deals.
 * **Free-to-Run Stack:** Runs perfectly fine on the Supabase free tier. Zero monthly backend overhead.
-* **Monetization Built-In:** Fully wired with **Paystack integration** for subscription tiers (Free / Premium / Artist). Toggle the feature gate on/off instantly via your Admin Panel.
+* **Monetization Built-In:** Fully wired with **Paystack integration** for subscription tiers (Free / Premium / Artist). Toggle feature gates instantly via your Admin Panel.
 * **Web3/MiniPay Ready:** Built with micro-transactions in mind, making it highly adaptable for platforms like MiniPay, web wallets, and local African gateways.
 * **AI-Powered Core:** Integrates with the Lovable AI Gateway for automated lyrics generation, custom DJ voice-overs, and smart playlist mood analysis.
+* **Production-Ready:** ~130 React components, RLS-secured Postgres database, 15+ Edge Functions, full PWA setup.
 
 ---
 
@@ -57,46 +89,216 @@ This repository serves as the public documentation. You can purchase the full pr
 | **Streaming** | Audius Discovery API (Public & Free) |
 | **AI Processing** | Lovable AI Gateway (Gemini/OpenAI routing) |
 | **Payments** | Paystack Gateway & Premium Gate Components |
+| **PWA** | Vite PWA Plugin, Workbox, Media Session API, Wake Lock |
 
 ---
 
-## 📦 What the Buyer Receives
+## 📦 What the Buyer Receives (Full Source)
 
 1. **Full Frontend App:** Clean, hooks-first React + TypeScript components (~130 components).
 2. **Database Architecture:** Complete `supabase/migrations/` directory containing the database schema and RLS policies.
 3. **Backend Logic:** 15+ pre-written Supabase Edge Functions for AI routing and metadata tasks.
 4. **PWA Assets:** Full Workbox service worker configuration and app icons.
+5. **Deployment Guide:** Step-by-step instructions for Vercel, Netlify, or self-hosted.
+6. **Admin Dashboard:** Complete artist/admin panel with music ingestion and settings.
 
 ---
 
-## ⚡ Quick Start (After Purchase)
+## ⚡ Quick Start (Frontend Demo)
 
-### 1. Installation
+### 1. Clone & Install
 ```bash
+git clone https://github.com/kainechibuzo/james-beats-redline.git
+cd james-beats-redline
 npm install
 ```
 
-### 2. Configure Environment Variables
-Create a `.env` file in the root directory and insert your keys:
-```env
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
-```
-
-### 3. Run Locally
+### 2. Run Locally
 ```bash
 npm run dev
 ```
 
-### 4. Deploy
-The codebase includes a `vercel.json` file for immediate single-page-app routing configuration. Drop the code into **Vercel, Netlify, or Render** to put it live in 2 minutes.
+Visit http://localhost:5173 — you're automatically logged in as demo user!
+
+### 3. Deploy to Vercel (Free)
+```bash
+npm run build
+vercel deploy --prod
+```
+
+Your site will be live at `your-project.vercel.app` 🎉
+
+---
+
+## 🎯 For Demo Mode Only
+
+The demo uses **local mock data** (no backend needed):
+
+```typescript
+// All data is hardcoded in browser memory
+const MOCK_SONGS = [
+  {
+    id: 'song-1',
+    title: 'Midnight Dreams',
+    artist: 'Luna Echo',
+    file_url: 'https://archive.org/download/Greatest_Hits/01.mp3',  // Free audio
+    cover_url: 'https://images.unsplash.com/...',                   // Free image
+  },
+  // ... 50+ more
+];
+```
+
+See `DEMO_MODE.md` for full customization guide.
+
+---
+
+## 🔐 Security & Privacy
+
+**The demo is safe to make public because:**
+
+✅ No real API credentials in the code  
+✅ No database schema exposed  
+✅ No payment keys visible  
+✅ All data is local (browser-only)  
+✅ No backend calls needed  
+
+**Sensitive files are in `.gitignore`:**
+- `.env` (real credentials)
+- `supabase/functions/` (backend logic)
+- `supabase/migrations/` (database schema)
+
+---
+
+## 📖 Documentation
+
+- **[DEMO_MODE.md](./DEMO_MODE.md)** — Complete demo setup and customization guide
+- **[.env.demo](./.env.demo)** — Safe environment variables (can be committed)
+- **[src/integrations/supabase/client-demo.ts](./src/integrations/supabase/client-demo.ts)** — Mock Supabase client
+
+---
+
+## 🎓 Learn & Build
+
+### Add Your Own Songs to Demo
+Edit `src/data/mockData.ts`:
+```typescript
+export const MOCK_SONGS = [
+  {
+    id: 'your-song',
+    title: 'Your Song',
+    artist: 'Your Name',
+    file_url: 'https://your-audio-url.mp3',
+    cover_url: 'https://your-image-url.jpg',
+    duration: 180,
+  },
+];
+```
+
+### Use Different Audio/Image Sources
+- **Audio:** Freesound.org, Pexels Videos, Archive.org, your own CDN
+- **Images:** Unsplash, Pexels, Pixabay, your own CDN
+
+### Deploy to Production
+```bash
+# Vercel (recommended)
+vercel deploy --prod
+
+# Netlify
+netlify deploy --prod
+
+# Docker / Self-hosted
+npm run build
+docker build -t james-beats .
+```
+
+---
+
+## 🎬 Screenshots
+
+### Player View
+![Player](https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600)
+
+### Album Browse
+![Albums](https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600)
+
+### Playlist Management
+![Playlists](https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600)
+
+---
+
+## 💰 Pricing & Licensing
+
+| License | Use Case | Price |
+|---------|----------|-------|
+| **Demo (GitHub)** | Personal projects, portfolio, learning | Free |
+| **Commercial License** | Business use, resale, white-label | $1,500+ |
+| **Exclusive License** | Full ownership, remove attribution | $3,000+ |
+
+After purchase, you receive:
+- ✅ Full source code (React + backend)
+- ✅ Supabase database migrations
+- ✅ 15+ Edge Functions
+- ✅ Deployment guide
+- ✅ Lifetime updates
+- ✅ Email support
+
+---
+
+## ❓ FAQ
+
+### Can I Use the Demo Commercially?
+No. The demo is free for learning and portfolio purposes only. For commercial use, purchase the full license.
+
+### How Do I Add Real Music?
+Purchase the full source code, set up Supabase + Audius API, configure Paystack, and you'll have a fully functional streaming platform.
+
+### Can I Remove Your Branding?
+The demo includes "James Beats" branding. The full commercial license allows you to white-label with your own branding.
+
+### Is the Demo Safe for GitHub?
+Yes! The demo has no real credentials or sensitive files. It's designed to be published publicly.
+
+### How Long Does Setup Take?
+- **Demo:** 5 minutes (clone → npm install → npm run dev)
+- **Full Setup:** 1-2 hours with deployment guide included
+
+---
+
+## 📬 Contact & Support
+
+**Questions about the demo?**  
+Open a GitHub Issue: https://github.com/kainechibuzo/james-beats-redline/issues
+
+**Want to buy the full source code?**  
+Email: **kainechibuzo@gmail.com**
+
+**Need custom features or setup help?**  
+Email: **kainechibuzo@gmail.com** (mention "custom setup")
 
 ---
 
 ## 📄 License & Terms
-The public documentation here is open. Purchasing the full product grants you a non-exclusive license to use, modify, white-label, and deploy the application for commercial or personal use. Reselling or distributing the raw source code bundle is strictly prohibited.
 
-## 📬 Inquiries & Custom Setup Support
-Need help setting up your instance or looking to buy **exclusive ownership rights ($1,500+)**? Reach out:
-* **Author:** Kaine Chibuzo
-* **Email:** kainechibuzo@gmail.com
+- **Demo (GitHub):** Open source for educational use. See LICENSE file.
+- **Full Source Code:** Non-exclusive commercial license granted upon purchase.
+- **Exclusive License:** Available for additional fee for white-label deployments.
+
+---
+
+## 🙏 Credits
+
+- **Author:** Kaine Chibuzo
+- **Built with:** React, Vite, TypeScript, Tailwind CSS, shadcn/ui, Supabase
+- **Music API:** Audius Discovery API
+- **Free Assets:** Unsplash (images), Archive.org (audio samples)
+
+---
+
+## 🚀 Ready to Launch?
+
+1. **Try the demo:** [▶ Live Demo](https://james-beats-demo.vercel.app)
+2. **Read the guide:** See `DEMO_MODE.md`
+3. **Deploy in 3 minutes:** Follow the Quick Start above
+4. **Buy full source:** [Email](mailto:kainechibuzo@gmail.com) for pricing
+
+**Let's build the next generation of music streaming! 🎵**
