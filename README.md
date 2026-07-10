@@ -1,55 +1,62 @@
 # james-beats-redline
 
-Repository for the james-beats-redline project.
+A modern interactive music streaming app.
 
 Short description
-- A short one-line summary of what this project does. Replace this with your project description.
+- A modern interactive music streaming app that lets users discover, create, and share music experiences in real time.
 
 ## Features
-- Feature 1 — brief note
-- Feature 2 — brief note
-- Feature 3 — brief note
+- Stream curated and user-uploaded tracks
+- Interactive playlists and live reactions
+- Supabase-backed auth and realtime features
 
 ## Getting started
 
 Prerequisites
-- List prerequisites here (Node.js, Python, Java, Docker, etc.)
+- Node.js (v16+ recommended)
+- npm or yarn
 
 Clone the repository
 - git clone https://github.com/kainechibuzo/james-beats-redline.git
 - cd james-beats-redline
 
 Install dependencies
-- Replace with language-specific commands, e.g. `npm install` or `pip install -r requirements.txt`
+- npm install
 
-Run
-- Example commands to run the project, e.g.:
-  - `npm start`
-  - `python main.py`
-  - `docker-compose up`
+Run (development)
+- npm run dev
+
+Build
+- npm run build
+
+Run (production)
+- npm run preview
 
 ## Configuration
-- Explain environment variables, configuration files, ports, API keys, etc.
-- Example:
-  - Copy `.env.example` to `.env` and set values:
-    - `API_KEY=your_key_here`
+
+This project uses environment variables for secrets and API keys. A template file has been added as `.env.example`.
+
+- Copy `.env.example` to `.env` and fill in the values before running the app:
+  - `SUPABASE_PUBLISHABLE_KEY`
+  - `SUPABASE_URL`
+  - `VITE_SUPABASE_PROJECT_ID`
+  - `VITE_SUPABASE_PUBLISHABLE_KEY`
+  - `VITE_SUPABASE_URL`
+
+Note: `.env` should NOT be committed to source control. If you have an existing `.env` file with secrets, remove it or add it to `.gitignore`.
 
 ## Usage
-- Show an example usage or API endpoints and sample requests/responses.
-- Provide short screenshots or code snippets if applicable.
+- Open http://localhost:5173 (or the port shown by your dev server) to view the app locally.
 
 ## Development
-- How to run tests
-  - e.g. `npm test` or `pytest`
-- How to run linters / formatters
-  - e.g. `npm run lint` or `prettier --write .`
+- Run tests: `npm test` (if tests exist)
+- Lint/format: `npm run lint` / `npm run format` (if configured)
 
 ## Contributing
-- Short contribution guidelines (fork, branch, PR, code style)
-- Open a Pull Request with a clear description of changes.
+- Fork the repository, create a feature branch, and open a pull request with a clear description of your changes.
 
 ## License
-No license specified. All rights reserved — contact the author for permission to use, modify, or distribute this project.
+This project is licensed under the MIT License — see the LICENSE file for details.
 
 ## Contact
 - Author: Kaine Chibuzo
@@ -57,4 +64,5 @@ No license specified. All rights reserved — contact the author for permission 
 
 ---
 
-If you'd like any of the sections customized (project description, tech stack, install/run commands, or a specific license), tell me what to include and I can update the README.md.
+**Notes:**
+- I renamed `.env` to `.env.example` in this commit to avoid committing secrets. If you want me to remove the original `.env` file from the repository, confirm and I will delete it in a follow-up commit.
