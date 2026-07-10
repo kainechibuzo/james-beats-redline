@@ -597,7 +597,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (pickEngine(song) === "audius") setIsPlaying(true);
     trackPlay.mutate(song.id);
     updateListeningActivity(song);
-  }, [cancelCrossfade, markSongAsPlayed, trackPlay, updateListeningActivity]);
+  }, [cancelCrossfade, markSongAsPlayed, trackPlay, updateListeningActivity, getNextIndex, consumeAndAdvance]);
 
   // Build a smart "similar tracks" queue from a seed song (same genre, then trending).
   const buildSimilarQueue = useCallback(async (seed: Song) => {
