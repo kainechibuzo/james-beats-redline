@@ -455,7 +455,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
               else if (state === YT.PlayerState.PAUSED) setIsPlaying(false);
               else if (state === YT.PlayerState.ENDED) handleSongEndRef.current();
             },
-            onError: (err: any) => console.error("YT player error", key, err?.data),
+            onError: (err: any) => {
+              const code = err?.data;
+              console.error("YT player error", key, code);
+              // 2 = invalid id, 5 = HTML5 err, 100 = removed/private, 101/150 = embed disabled
+              // Auto-skip to next playable track so playback never stalls silently.
+              if (key === activeKeyRef.current && [2, 5, 100, 101, 150].includes(code)) {
+                cancelCrossfade();
+                handleSongEndRef.current();
+              }
+            },
           },
         });
 
