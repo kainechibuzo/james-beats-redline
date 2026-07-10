@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from "react";
+import { toast } from "sonner";
 import { Song, useTrackPlay } from "@/hooks/useSongs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
