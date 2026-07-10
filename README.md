@@ -35,13 +35,11 @@ The demo includes:
 
 This repository contains the **frontend-only demo** (safe to publish on GitHub). The full production-ready source code with backend, database, and deployment package is available for purchase.
 
-| Package | What You Get | Price |
+| Package | What You Get | Link |
 | :--- | :--- | :--- |
-| **🎮 Frontend Demo** | React components + UI/UX (free, on GitHub) | Free |
-| **💳 Full Source Code** | Complete backend + database + migrations | $1,500+ |
-| **🚀 Setup Service** | Deployment help + custom setup | +$300 |
-
-**[👉 Buy Full Source Code](YOUR_GUMROAD_OR_RUUL_LINK_HERE)** | **[💬 Custom Quote](mailto:kainechibuzo@gmail.com)**
+| **🎮 Frontend Demo** | React components + UI/UX (free, on GitHub) | [View on GitHub](https://github.com/kainechibuzo/james-beats-redline) |
+| **💳 Full Source Code** | Complete backend + database + migrations + lifetime updates | **[👉 BUY NOW - $1,500+](https://chibuzokai.gumroad.com/l/ewymr)** |
+| **🚀 Setup Service** | Deployment help + custom setup (optional add-on) | Email for quote |
 
 ---
 
@@ -101,6 +99,8 @@ This repository contains the **frontend-only demo** (safe to publish on GitHub).
 4. **PWA Assets:** Full Workbox service worker configuration and app icons.
 5. **Deployment Guide:** Step-by-step instructions for Vercel, Netlify, or self-hosted.
 6. **Admin Dashboard:** Complete artist/admin panel with music ingestion and settings.
+7. **Lifetime Updates:** Access to future improvements and bug fixes.
+8. **Email Support:** Direct access to the author for setup help.
 
 ---
 
@@ -228,11 +228,13 @@ docker build -t james-beats .
 
 ## 💰 Pricing & Licensing
 
-| License | Use Case | Price |
-|---------|----------|-------|
-| **Demo (GitHub)** | Personal projects, portfolio, learning | Free |
-| **Commercial License** | Business use, resale, white-label | $1,500+ |
-| **Exclusive License** | Full ownership, remove attribution | $3,000+ |
+| License | Use Case | Price | What's Included |
+|---------|----------|-------|-----------------|
+| **Demo (GitHub)** | Personal projects, portfolio, learning | Free | React components, UI/UX only |
+| **Commercial License** | Business use, resale, white-label | $1,500+ | Full source + backend + database + updates |
+| **Exclusive License** | Full ownership, remove attribution | $3,000+ | Everything + full rights + priority support |
+
+**[👉 BUY NOW ON GUMROAD](https://chibuzokai.gumroad.com/l/ewymr)**
 
 After purchase, you receive:
 - ✅ Full source code (React + backend)
@@ -247,10 +249,10 @@ After purchase, you receive:
 ## ❓ FAQ
 
 ### Can I Use the Demo Commercially?
-No. The demo is free for learning and portfolio purposes only. For commercial use, purchase the full license.
+No. The demo is free for learning and portfolio purposes only. For commercial use, purchase the full license on Gumroad.
 
 ### How Do I Add Real Music?
-Purchase the full source code, set up Supabase + Audius API, configure Paystack, and you'll have a fully functional streaming platform.
+Purchase the full source code, set up Supabase + Audius API, configure Paystack, and you'll have a fully functional streaming platform with millions of tracks.
 
 ### Can I Remove Your Branding?
 The demo includes "James Beats" branding. The full commercial license allows you to white-label with your own branding.
@@ -262,6 +264,12 @@ Yes! The demo has no real credentials or sensitive files. It's designed to be pu
 - **Demo:** 5 minutes (clone → npm install → npm run dev)
 - **Full Setup:** 1-2 hours with deployment guide included
 
+### What Payment Methods Does Gumroad Accept?
+Gumroad accepts all major credit cards, PayPal, Apple Pay, Google Pay, and more. See Gumroad checkout for full list.
+
+### Do I Get Updates After Purchase?
+Yes! The commercial license includes lifetime updates. You'll have access to all future improvements.
+
 ---
 
 ## 📬 Contact & Support
@@ -269,8 +277,8 @@ Yes! The demo has no real credentials or sensitive files. It's designed to be pu
 **Questions about the demo?**  
 Open a GitHub Issue: https://github.com/kainechibuzo/james-beats-redline/issues
 
-**Want to buy the full source code?**  
-Email: **kainechibuzo@gmail.com**
+**Ready to buy the full source code?**  
+👉 **[BUY ON GUMROAD - $1,500+](https://chibuzokai.gumroad.com/l/ewymr)**
 
 **Need custom features or setup help?**  
 Email: **kainechibuzo@gmail.com** (mention "custom setup")
@@ -280,14 +288,14 @@ Email: **kainechibuzo@gmail.com** (mention "custom setup")
 ## 📄 License & Terms
 
 - **Demo (GitHub):** Open source for educational use. See LICENSE file.
-- **Full Source Code:** Non-exclusive commercial license granted upon purchase.
+- **Full Source Code:** Non-exclusive commercial license granted upon purchase via Gumroad.
 - **Exclusive License:** Available for additional fee for white-label deployments.
 
 ---
 
 ## 🙏 Credits
 
-- **Author:** Kaine Chibuzo
+- **Author:** Kaine Chibuzo ([@kainechibuzo](https://github.com/kainechibuzo))
 - **Built with:** React, Vite, TypeScript, Tailwind CSS, shadcn/ui, Supabase
 - **Music API:** Audius Discovery API
 - **Free Assets:** Unsplash (images), Archive.org (audio samples)
@@ -299,6 +307,10 @@ Email: **kainechibuzo@gmail.com** (mention "custom setup")
 1. **Try the demo:** [▶ Live Demo](https://james-beats-demo.vercel.app)
 2. **Read the guide:** See `DEMO_MODE.md`
 3. **Deploy in 3 minutes:** Follow the Quick Start above
-4. **Buy full source:** [Email](mailto:kainechibuzo@gmail.com) for pricing
+4. **Buy full source:** [👉 Purchase on Gumroad](https://chibuzokai.gumroad.com/l/ewymr)
 
 **Let's build the next generation of music streaming! 🎵**
+
+---
+
+**Made with ❤️ by [Kaine Chibuzo](https://github.com/kainechibuzo)**
